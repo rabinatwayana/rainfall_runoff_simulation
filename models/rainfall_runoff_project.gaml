@@ -19,7 +19,7 @@
 */
 model RainfallRunoffModel
 
-global {
+global{
 
 	// supposed to be used RGB Image, but not satisfied result, thus using DEM for now
 	// due to the 0 value in sundarijal_DEM.tif, it could not be used
