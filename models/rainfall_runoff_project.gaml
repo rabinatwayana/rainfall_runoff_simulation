@@ -1,22 +1,3 @@
-/**
-* Name: RainfallRunoffModel
-* Based on the internal empty template. 
-* Author: rabinatwayana
-* Tags: 
-
-* Resources: 
-* https://gama-platform.org/wiki/CodeExamples
-* 
-* ASCII File to DEM Representation, 3 experiments, 3D
-* https://gama-platform.org/wiki/ASCII_File_to_DEM_Representation //NOT USED, MOVED TO FIELDS
-*
-* TOOL: Raster>conversion>translate to export .tif to .asc
-* 
-* Fields: Library models> GAMA Syntax> Data Types and Structure > Fields.gaml
-* Brewer Color: https://colorbrewer2.org/#type=sequential&scheme=YlGn&n=3 
-*
-*
-*/
 model RainfallRunoffModel
 
 global{
@@ -24,8 +5,38 @@ global{
 	// supposed to be used RGB Image, but not satisfied result, thus using DEM for now
 	// due to the 0 value in sundarijal_DEM.tif, it could not be used
 	field field_display <- field(grid_file("../includes/sundarijal_DEM_by_extent.tif"));
+	
 	//	field field_display <- field(grid_file("../includes/rgbImage.tif"));
 	field var_field <- copy(field_display) - mean(field_display);
+	
+	
+//	Define Envelope that matches the DEM coordinates
+//	geometry var3 <- polygon([{0,0}, {100,0}, {0,100}, {100,100}]); // for general test. this is how envelope polygon looks like
+//	Since we are adding bigger value of envelope ie. bbox, we need more exageration in scale while displaying. ie. scale <- 3 looks good. 
+	float xmin <- 931885.867800-1;
+//	float xmin <- 0.0;
+	float xmax <- 941275.867800+1;
+	float ymin <- 3077102.604300-1;
+//	float ymin <- 0.0;
+	float ymax <- 3085262.604300+1;
+
+	geometry ev <- polygon([{xmin, ymin}, {xmax, ymin}, {xmin, ymax}, {xmax, ymax}]);
+	geometry shape <- envelope(ev);
+	
+	
+//	load watershed boundary
+//	file watershed_bdry_file <- shape_file("../includes/watershed_bdry/watershed_polygon.shp");
+	file watershed_bdry_file <- file("../includes/watershed_bdry/watershed_polygon.geojson");
+	geometry watershed_bdry_polygon <- geometry(watershed_bdry_file);
+	
+//	load water level station
+	geometry water_level_point <- point([{85.42,27.76}]);
+	
+	init{
+		create watershed_bdry_agent from: geometry(watershed_bdry_polygon);
+		
+		create water_level_agent from: water_level_point;
+	}
 }
 
 species declaring_field {
@@ -85,6 +96,20 @@ species manipulating_field {
 
 }
 
+species watershed_bdry_agent {
+	
+	aspect default{
+     	draw watershed_bdry_polygon color:#transparent border: #black; 
+     }
+}
+
+species water_level_agent {
+	
+	aspect default{
+     	draw water_level_point color:#transparent border: #black; 
+     }
+}
+
 //Grid that will be saved in the ASC File
 grid cell width: 100 height: 100 {
 	float grid_value <- rnd(1.0, self distance_to world.location);
@@ -99,11 +124,14 @@ experiment rainfall_runoff_view type: gui {
 	output {
 		layout #split;
 		display "field through mesh in brewer colors" type: 3d {
-			mesh field_display color: (brewer_colors("YlGn")) scale: 0.05 triangulation: true smooth: true refresh: false;
+			mesh field_display color: (brewer_colors("YlGn")) scale: 3 triangulation: true smooth: true refresh: false;
+			species watershed_bdry_agent aspect:default transparency: 0.5;
+			species water_level_agent aspect:default transparency: 0.5;
+			
 		}
 
 		display "field through mesh in grey scale" type: 3d {
-			mesh field_display grayscale: true scale: 0.05 triangulation: true smooth: true refresh: false;
+			mesh field_display grayscale: true scale: 0.03 triangulation: true smooth: true refresh: false;
 		}
 
 		// 		Not working
@@ -116,7 +144,7 @@ experiment rainfall_runoff_view type: gui {
 		//			mesh field_display.bands[2] color: scale([#red::100, #yellow::115, #green::101, #darkgreen::105]) scale: 0.2 refresh: false;
 		//		}
 		display "var field" type: 3d {
-			mesh var_field color: (brewer_colors("RdBu")) scale: 0.0;
+			mesh var_field color: (brewer_colors("RdBu")) scale: 0.03;
 		}
 
 	}
