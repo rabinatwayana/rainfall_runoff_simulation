@@ -4,12 +4,20 @@ global {
 	myCA centreCell;
 	// supposed to be used RGB Image, but not satisfied result, thus using DEM for now
 	// due to the 0 value in sundarijal_DEM.tif, it could not be used
-	field field_display <- field(grid_file("../includes/sundarijal_DEM_by_extent.tif"));
+	file tif_file <- grid_file("../includes/sundarijal_DEM_by_extent.tif");
+	file watershed_bdry_file <- file("../includes/watershed_bdry/watershed_polygon3d.geojson");
+	file stations_file <- geojson_file("../includes/Stations/stations.geojson", true);
+	geometry watershed_bdry_polygon <- geometry(watershed_bdry_file);
+	geometry stations_points <- geometry(stations_file);
+	
+	field field_display <- field(tif_file);
 
 	//	field field_display <- field(grid_file("../includes/rgbImage.tif"));
 	field var_field <- copy(field_display) - mean(field_display);
 	file raster_file <- file("../includes/sundarijal_DEM_by_extent.asc");
-	geometry shape <- envelope(raster_file);
+	geometry shape <- envelope(watershed_bdry_file);
+	
+	
 
 	//	geometry var1<- shape CRS_transform("EPSG:4326");
 	init {
@@ -40,6 +48,9 @@ global {
 		// assign grey color shades for the DEM
 			color <- rgb([int((grid_value - 230) * 8), int((grid_value - 230) * 8), int((grid_value - 230) * 8)]);
 		}
+		
+		create watershed_bdry_agent from: watershed_bdry_polygon;
+		create stations_agent from: stations_points;
 
 	}
 
@@ -59,6 +70,22 @@ species rainfall_station {
 		draw circle(100) color: #brown;
 	}
 
+}
+
+
+species watershed_bdry_agent {
+	
+	aspect default{
+     	draw watershed_bdry_polygon color:#red border: #red;
+     }
+}
+
+species stations_agent {
+	
+	aspect default{
+     	draw stations_points color:#green border: #green;
+//		draw circle(2) color:#yellow border: #green; 
+     }
 }
 
 grid myCA file: raster_file {
@@ -107,11 +134,14 @@ experiment rainfall_runoff_view type: gui {
 		//			species rainfall_station aspect: default;
 		//		}
 		display "field through mesh in brewer colors" type: 3d {
+			
 
-		//			species PointMarker aspect: sphere;
 			species rainfall_station aspect: default;
 			grid myCA;
 			mesh field_display color: (brewer_colors("YlGn")) scale: 3 triangulation: true smooth: true refresh: false;
+			
+			species watershed_bdry_agent aspect: default;
+			species stations_agent aspect: default;
 			//			species rainfall_station aspect: default;
 			//			ask myCA {
 			//				draw color: #red; // Draw the grid with the assigned color

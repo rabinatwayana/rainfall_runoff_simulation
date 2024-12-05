@@ -1,0 +1,10 @@
+{
+"type": "FeatureCollection",
+"name": "stations",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32644" } },
+"features": [
+{ "type": "Feature", "properties": { "Id": 0, "name": "Dhap DAM Rainfall Station", "type": "rainfall", "Z": 2089.31517175 }, "geometry": { "type": "Point", "coordinates": [ 939154.872462730738334, 3083799.649202660657465, 6267.94551 ] } },
+{ "type": "Feature", "properties": { "Id": 0, "name": "Bagmati Water Level Station", "type": "water_level", "Z": 1352.9462044300001 }, "geometry": { "type": "Point", "coordinates": [ 936005.822451834799722, 3077909.181984767317772, 1352.94620443 ] } },
+{ "type": "Feature", "properties": { "Id": 0, "name": "Sundarijal Rainfall Station", "type": "rainfall", "Z": 1389.8307140300001 }, "geometry": { "type": "Point", "coordinates": [ 936916.453094935743138, 3077385.281258385628462, 1389.83071403 ] } }
+]
+}
