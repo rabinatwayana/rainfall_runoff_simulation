@@ -19,24 +19,13 @@ global {
 	
 	
 
-	//	geometry var1<- shape CRS_transform("EPSG:4326");
 	init {
-	//		shape <- envelope(raster_file);
-	//		create PointMarker;
-	//		create rainfall_station number: 1;
-
-	//		create rainfall_station number: 1 {
-	//            location <- [4000, 4000, max(field_display at_location [4000, 4000]) + 20];
-	//        }
-
-		//931885.8678 3085262.6043, 941275.8678 3085262.6043, 941275.8678 3077102.6043, 931885.8678 3077102.6043, 931885.8678 3085262.6043))
 		create rainfall_station number: 1 {
-		//            location <- [931885.8678, 3085262.6043,5800, field_display at point(931885.8678, 3085262.6043,5800) + 20]; // Corrected location assignment
-			location <- [4000, 4000, 5800, field_display at point(4000, 4000, 5800) + 20]; // Corrected location assignment
+			location <- point(to_GAMA_CRS({936580.8678, 3081182.6043, 5800}, "EPSG:32644"));
 		}
-
-		write "Grid bounds: " + shape; // POLYGON ((0 8160, 9390 8160, 9390 0, 0 0, 0 8160))
-		//		write "Grid bounds: " + envelope(raster_file);
+//		write "Grid bounds shape: " + shape; // POLYGON ((0 8160, 9390 8160, 9390 0, 0 0, 0 8160))
+//		write "Grid bouunds rasterfile: " + envelope(raster_file);
+//		write "Grid bouunds myCA: " + envelope(myCA);
 		centreCell <- myCA[75, 85];
 
 		// set the water column at the first time step
