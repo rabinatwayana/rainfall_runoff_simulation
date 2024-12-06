@@ -1,176 +1,133 @@
 model RainfallRunoffModel
 
 global {
-	myCA centreCell;
-	// supposed to be used RGB Image, but not satisfied result, thus using DEM for now
-	// due to the 0 value in sundarijal_DEM.tif, it could not be used
-	file tif_file <- grid_file("../includes/sundarijal_DEM_by_extent.tif");
-	file watershed_bdry_file <- file("../includes/watershed_bdry/watershed_polygon3d.geojson");
-	file stations_file <- geojson_file("../includes/Stations/stations.geojson", true);
-	geometry watershed_bdry_polygon <- geometry(watershed_bdry_file);
-	geometry stations_points <- geometry(stations_file);
-	
-	field field_display <- field(tif_file);
+    grid_file dem_file <- file("../includes/sundarijal_DEM_by_extent.asc");
+    field terrain <- field(dem_file);
+    field flow <- field(terrain.columns, terrain.rows);
+    field combined_height <- field(terrain.columns, terrain.rows); // Field to combine terrain and flow
 
-	//	field field_display <- field(grid_file("../includes/rgbImage.tif"));
-	field var_field <- copy(field_display) - mean(field_display);
-	file raster_file <- file("../includes/sundarijal_DEM_by_extent.asc");
-	geometry shape <- envelope(watershed_bdry_file);
-	
-	
+    geometry shape <- envelope(dem_file);
+    bool fill <- false;
 
-	//	geometry var1<- shape CRS_transform("EPSG:4326");
-	init {
-	//		shape <- envelope(raster_file);
-	//		create PointMarker;
-	//		create rainfall_station number: 1;
+    // Diffusion rate and other parameters
+    float diffusion_rate <- 0.8;
+    int frequence_input <- 3;
+    list<point> drain_cells <- [];
+    list<point> source_cells <- [];
+    map<point, float> heights <- [];
+    list<point> points <- flow points_in shape;
+    map<point, list<point>> neighbors <- points as_map (each::(flow neighbors_of each));
+    map<point, bool> done <- points as_map (each::false);
+    map<point, float> h <- points as_map (each::terrain[each]);
+    float input_water;
 
-	//		create rainfall_station number: 1 {
-	//            location <- [4000, 4000, max(field_display at_location [4000, 4000]) + 20];
-	//        }
+    init {
+        // Create a rainfall station
+        create rainfall_station number: 1 {
+            location <- point(to_GAMA_CRS({936580.8678, 3081182.6043, 5800}, "EPSG:32644"));
+        }
 
-		//931885.8678 3085262.6043, 941275.8678 3085262.6043, 941275.8678 3077102.6043, 931885.8678 3077102.6043, 931885.8678 3085262.6043))
-		create rainfall_station number: 1 {
-		//            location <- [931885.8678, 3085262.6043,5800, field_display at point(931885.8678, 3085262.6043,5800) + 20]; // Corrected location assignment
-			location <- [4000, 4000, 5800, field_display at point(4000, 4000, 5800) + 20]; // Corrected location assignment
-		}
+        // Load river geometry and classify cells
+        geometry river_g <- first(file("../includes/watershed_bdry/watershed_polygon.shp"));
+        float c_h <- shape.height / flow.rows;
+        list<point> rivers_pt <- points where ((each overlaps river_g) and (terrain[each] < 3000.0));
 
-		write "Grid bounds: " + shape; // POLYGON ((0 8160, 9390 8160, 9390 0, 0 0, 0 8160))
-		//		write "Grid bounds: " + envelope(raster_file);
-		centreCell <- myCA[75, 85];
+        if (fill) {
+            loop pt over: rivers_pt {
+                flow[pt] <- 1.0;
+            }
+        }
 
-		// set the water column at the first time step
-		ask centreCell {
-			water_level <- 200.0 #mm;
-		}
+        loop pt over: rivers_pt {
+            if (pt.y < c_h) {
+                source_cells << pt;
+            }
+        }
+        loop pt over: rivers_pt {
+            if (pt.y > (shape.height - c_h)) {
+                drain_cells << pt;
+            }
+        }
+    }
 
-		ask myCA {
-		// assign grey color shades for the DEM
-			color <- rgb([int((grid_value - 230) * 8), int((grid_value - 230) * 8), int((grid_value - 230) * 8)]);
-		}
-		
-		create watershed_bdry_agent from: watershed_bdry_polygon;
-		create stations_agent from: stations_points;
+    // Reflex to add water among the source cells
+    reflex adding_input_water when: every(frequence_input # cycle) {
+        loop p over: source_cells {
+            flow[p] <- flow[p] + input_water;
+        }
+    }
 
-	}
+    // Reflex for the drain cells to drain water
+    reflex draining {
+        loop p over: drain_cells {
+            flow[p] <- 0.0;
+        }
+    }
 
-	reflex deliver_water {
-		ask centreCell {
-			water_level <- water_level + 100 #mm;
-		}
+    float height(point c) {
+        return h[c] + flow[c];
+    }
 
-		write "update";
-	}
+    // Reflex to flow the water according to the altitude and the obstacle
+    reflex flowing {
+        done[] <- false;
+        heights <- points as_map (each::height(each));
+        list<point> water <- points where (flow[each] > 0) sort_by (heights[each]);
+        loop p over: points - water {
+            done[p] <- true;
+        }
+        loop p over: water {
+            float height <- height(p);
+            loop flow_cell over: (neighbors[p] where (done[each] and height > heights[each])) sort_by heights[each] {
+                float water_flowing <- max(0.0, min((height - heights[flow_cell]), flow[p] * diffusion_rate));
+                flow[p] <- flow[p] - water_flowing;
+                flow[flow_cell] <- flow[flow_cell] + water_flowing;
+                heights[p] <- height(p);
+                heights[flow_cell] <- height(flow_cell);
+            }
+            done[p] <- true;
+        }
+    }
 
+    // Reflex to update the combined height field
+    reflex update_combined_height {
+        loop p over: points {
+            combined_height[p] <- terrain[p] + flow[p];
+        }
+    }
 }
 
 species rainfall_station {
-
-	aspect default {
-		draw circle(100) color: #brown;
-	}
-
-}
-
-
-species watershed_bdry_agent {
-	
-	aspect default{
-     	draw watershed_bdry_polygon color:#red border: #red;
-     }
-}
-
-species stations_agent {
-	
-	aspect default{
-     	draw stations_points color:#green border: #green;
-//		draw circle(2) color:#yellow border: #green; 
-     }
-}
-
-grid myCA file: raster_file {
-	float water_level;
-	//240 is just to avoid the jump from zero at the first time step.
-	float water_elev <- 240.0;
-
-	reflex run_off when: water_level >= 100.0 #mm {
-	//take the neighbour with the lowest elevation
-		ask neighbors with_min_of (grid_value + water_level) {
-		//if the elevation + water column of the sending cell is higher than the neighbour
-			if (myself.grid_value + myself.water_level) > (grid_value + water_level) {
-			//give all the water to the neighbour
-				water_level <- water_level + 100.0 #mm;
-				//write the elevation for this water cell into a variable (needed for the chart)
-				water_elev <- grid_value;
-				//subtract the water from myself
-				myself.water_level <- myself.water_level - 100 #mm;
-			}
-
-		}
-
-		do update_colour;
-	}
-
-	// show grid values in shades of grey and the water in blue
-	action update_colour {
-	// recolour DEM, if there is no water; only for blue cells to avoid pointless recolouring of all cells at every time step
-		if (water_level <= 0 and color = #blue) {
-		// DEM colour
-			color <- rgb([int((grid_value - 230) * 8), int((grid_value - 230) * 8), int((grid_value - 230) * 8)]);
-		} else {
-		// water colour
-		//color <- rgb(0,0,int(water_level*255));
-			color <- #blue;
-		}
-
-	}
-
+    aspect default {
+        draw circle(100) color: #brown;
+    }
 }
 
 experiment rainfall_runoff_view type: gui {
-	output {
-		layout #split;
-		//			display map {
-		//			species rainfall_station aspect: default;
-		//		}
-		display "field through mesh in brewer colors" type: 3d {
-			
+    parameter "Input water at source" var: input_water <- 100.0 min: 0.0 max: 300.0 step: 0.1;
+    parameter "Fill the river" var: fill <- true;
 
-			species rainfall_station aspect: default;
-			grid myCA;
-			mesh field_display color: (brewer_colors("YlGn")) scale: 3 triangulation: true smooth: true refresh: false;
-			
-			species watershed_bdry_agent aspect: default;
-			species stations_agent aspect: default;
-			//			species rainfall_station aspect: default;
-			//			ask myCA {
-			//				draw color: #red; // Draw the grid with the assigned color
-			//			}
-			//			grid myCA color: myCA.color scale: 1.0 triangulation: true smooth: true refresh: false transparency: 0.5;
+    output {
+        layout #split;
 
-			//			draw sphere(center: location(centreCell), radius: 0.1) color: #red;
-			//			species watershed_bdry_agent aspect:default transparency: 0.5;
-			//			species water_level_agent aspect:default transparency: 0.5;
+        display "field through mesh in brewer colors" type: 3d {
+            species rainfall_station aspect: default;
 
-		}
+            // Terrain mesh with its original elevation
+            mesh terrain 
+                color: (brewer_colors("YlGn")) 
+                scale: 3 
+                triangulation: true 
+                smooth: true 
+                refresh: false;
 
-		//		display "field through mesh in grey scale" type: 3d {
-		//			mesh field_display grayscale: true scale: 0.03 triangulation: true smooth: true refresh: false;
-		//		}
-
-		// 		Not working
-		//		display "rgb field through mesh" type: 3d {
-		//			mesh field_display color: field_display.bands scale: 0.1 triangulation: true smooth: 4 refresh: false;
-		//		}
-
-		//		output is not satisfied
-		//		display "rnd field with palette mesh" type: 3d {
-		//			mesh field_display.bands[2] color: scale([#red::100, #yellow::115, #green::101, #darkgreen::105]) scale: 0.2 refresh: false;
-		//		}
-		//		display "var field" type: 3d {
-		//			mesh var_field color: (brewer_colors("RdBu")) scale: 0.03;
-		//		}
-		//
-	}
-
+            // Flow mesh using combined height
+            mesh combined_height 
+                scale: 3
+                triangulation: true 
+                color: palette(reverse(brewer_colors("Blues"))) 
+                transparency: 0.5 
+                no_data: 0.0;
+        }
+    }
 }
