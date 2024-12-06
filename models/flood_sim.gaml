@@ -27,6 +27,12 @@ global {
    grid_file dem_file1 <- file("../includes/sundarijal_DEM_by_extent.asc");
    field terrain <- field(dem_file1) ;
    
+   //import water level and rainfall data
+   file rainfall_file <- csv_file("../includes/Hydromet_Data/DhapDamRainfalFinal(in).csv",",");
+   file water_level_file <- csv_file("../includes/Hydromet_Data/WaterLevelSundarijalFinal(in).csv",",");
+   
+   
+   
    
    //Diffusion rate
    float diffusion_rate <- 0.6;
@@ -46,6 +52,13 @@ global {
   
    float step <- 1#h;
    
+   //initialize rainfall and water level data
+   matrix rainfall_data;
+   matrix water_level_data;
+   
+   //hours for each time step - increase by 1
+   int hour_count <- 0;
+   
    init {
    	 //Initialization of the cells
       do init_cells;
@@ -62,6 +75,24 @@ global {
          obstacle_height <- compute_highest_obstacle();
          do update_color;
       }
+      
+      //convert the file into a matrix
+	  rainfall_data <- matrix(rainfall_file);
+	  water_level_data <- matrix(water_level_file);
+//	  write "rainfall data"+rainfall_data[index,2];
+	  //loop on the matrix rows (skip the first header line)
+//	  loop i from: 1 to: rainfall_data.rows -1{
+//	  	//loop on the matrix columns
+//	  	loop j from: 0 to: rainfall_data.columns -1{
+//			write "data rows:"+ i +" colums:" + j + " = " + rainfall_data[j,i];
+//	  	}	
+//	  }
+//	  loop i from: 1 to: water_level_data.rows -1{
+//	  	//loop on the matrix columns
+//	  	loop j from: 0 to: water_level_data.columns -1{
+//			write "data rows:"+ i +" colums:" + j + " = " + water_level_data[j,i];
+//	  	}	
+//	  }
    }
    //Action to initialize the altitude value of the cell according to the dem file
    action init_cells {
@@ -73,6 +104,7 @@ global {
    //action to initialize the water cells according to the river shape file and the drain
    action init_water {
       geometry river <- geometry(river_shapefile);
+      
       ask cell overlapping river  {
          water_height <- 0.0;
          is_river <- true;
@@ -92,10 +124,14 @@ global {
    }
    //Reflex to add water among the water cells
    reflex adding_input_water {
-   	  float water_input <- rnd(100)/1000;
+//   	  float water_input <- rnd(100)/1000;
+	  write hour_count;
+	   write "rainfall data "+rainfall_data[2, hour_count];
+	  float water_input <- float(rainfall_data[2, hour_count])*3;
       ask river_cells {
          water_height <- water_height + water_input;
       }
+      hour_count <- hour_count+1;
    }
    //Reflex to flow the water according to the altitute and the obstacle
    reflex flowing {
@@ -305,10 +341,5 @@ experiment Run type: gui {
             data "Rate of dykes with low pressure" value: (dyke count (each.water_pressure < 0.25))/ length(dyke) style: line color: #green ;
          }
       }
-//      display d type: 3d {
-//			camera 'default' location: {7071.9529,10484.5136,5477.0823} target: {3450.0,3220.0,0.0};
-//			mesh terrain scale: 5 triangulation: true  color: palette([#burlywood, #saddlebrown, #darkgreen, #green]) refresh: false smooth: true;
-////			mesh flow scale: 5 triangulation: true color: palette(reverse(brewer_colors("Blues"))) transparency: 0.5 no_data:0.0 ;
-//	  } 
    }
 }
