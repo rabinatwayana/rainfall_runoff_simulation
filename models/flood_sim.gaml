@@ -328,7 +328,7 @@ experiment Run type: gui {
       display map type: 3d {
 
          camera 'default' location: {7071.9529,10484.5136,5477.0823} target: {3450.0,3220.0,0.0};
-//		 mesh terrain scale: 5 triangulation: true  color: palette([#burlywood, #saddlebrown, #darkgreen, #green]) refresh: false smooth: true;
+		 mesh terrain scale: 1 triangulation: true  color: palette([#burlywood, #saddlebrown, #darkgreen, #green]) refresh: false smooth: true;
          grid cell transparency:0.5 elevation:true;
          species buildings aspect: geometry refresh: false;
          species dyke aspect: geometry ;
