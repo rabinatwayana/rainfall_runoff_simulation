@@ -1,8 +1,15 @@
+
+//map dat_type: a composite datatype holding an ordered collection of pairs (a key, and its associated value).
+
+// "<<" this operator add the value to containera 
+
+
 model RainfallRunoffModel
 
 global {
     grid_file dem_file <- file("../includes/sundarijal_DEM_by_extent.asc");
     field terrain <- field(dem_file);
+    
     field flow <- field(terrain.columns, terrain.rows);
     field combined_height <- field(terrain.columns, terrain.rows); // Field to combine terrain and flow
 
@@ -22,6 +29,8 @@ global {
     float input_water;
 
     init {
+//    	write string(terrain.columns) + "terrain column";
+//    	write string(terrain.rows) + "terrain rows";
         // Create a rainfall station
         create rainfall_station number: 1 {
             location <- point(to_GAMA_CRS({936580.8678, 3081182.6043, 5800}, "EPSG:32644"));
@@ -30,10 +39,15 @@ global {
         // Load river geometry and classify cells
         geometry river_g <- first(file("../includes/watershed_bdry/watershed_polygon.shp"));
         float c_h <- shape.height / flow.rows;
+//        write string(shape.height) + "shape height";
+//    	write string(flow.rows) + "flow.rows";
+//        write c_h;
         list<point> rivers_pt <- points where ((each overlaps river_g) and (terrain[each] < 3000.0));
 
         if (fill) {
+        	write "filling";
             loop pt over: rivers_pt {
+            	
                 flow[pt] <- 1.0;
             }
         }
@@ -70,6 +84,8 @@ global {
 
     // Reflex to flow the water according to the altitude and the obstacle
     reflex flowing {
+//    	write "initial flow";
+//    	write flow;
         done[] <- false;
         heights <- points as_map (each::height(each));
         list<point> water <- points where (flow[each] > 0) sort_by (heights[each]);
@@ -87,10 +103,15 @@ global {
             }
             done[p] <- true;
         }
+        
+//        write "final flow";
+//    	write flow;
     }
 
     // Reflex to update the combined height field
     reflex update_combined_height {
+//    	write cycle;
+//     	write flow;
         loop p over: points {
             combined_height[p] <- terrain[p] + flow[p];
         }
@@ -101,6 +122,17 @@ species rainfall_station {
     aspect default {
         draw circle(100) color: #brown;
     }
+    
+     // Reflex to update the combined height field
+    reflex get_river_height {
+//    	point p <- point(9360.0,7110.0,0.0);
+    	point river_location <- point(to_GAMA_CRS({936580.8678, 3081182.6043, 5800}, "EPSG:32644"));
+        write "river height";
+    	write flow[river_location];
+    
+    }
+    
+    
 }
 
 experiment rainfall_runoff_view type: gui {
