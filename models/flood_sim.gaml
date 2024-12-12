@@ -28,7 +28,7 @@ global {
    field terrain <- field(dem_file1) ;
    
    //import water level and rainfall data
-   file rainfall_file <- csv_file("../includes/Hydromet_Data/DhapDamRainfalFinal(in).csv",",");
+   file rainfall_file <- csv_file("../includes/Hydromet_Data/modified_DhapDamRainfalFinal(in).csv",",");
    file water_level_file <- csv_file("../includes/Hydromet_Data/WaterLevelSundarijalFinal(in).csv",",");
    
    
@@ -325,11 +325,11 @@ experiment Run type: gui {
    parameter "Diffusion rate" var:diffusion_rate category:"Water dynamic";
    output { 
    //layout vertical([0::5000,1::5000]) tabs:false editors: false;
-      display map type: 2d {
+      display map type: 3d {
 
          camera 'default' location: {7071.9529,10484.5136,5477.0823} target: {3450.0,3220.0,0.0};
 		 mesh terrain scale: 5 triangulation: true  color: palette([#burlywood, #saddlebrown, #darkgreen, #green]) refresh: false smooth: true;
-         grid cell triangulation: true transparency:0.5;
+         grid cell triangulation: true elevation: true transparency:0.5 grayscale:true;
          species buildings aspect: geometry refresh: false;
          species dyke aspect: geometry ;
       }
