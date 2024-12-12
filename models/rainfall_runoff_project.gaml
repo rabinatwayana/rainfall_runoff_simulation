@@ -38,11 +38,13 @@ global {
 
         // Load river geometry and classify cells
         geometry river_g <- first(file("../includes/watershed_bdry/watershed_polygon.shp"));
+        // calculate the size of pixel i.e y direction
         float c_h <- shape.height / flow.rows;
-//        write string(shape.height) + "shape height";
-//    	write string(flow.rows) + "flow.rows";
-//        write c_h;
+        write string(shape.height) + "shape height";
+    	write string(flow.rows) + "flow.rows";
+        write "cH: " + c_h;
         list<point> rivers_pt <- points where ((each overlaps river_g) and (terrain[each] < 3000.0));
+        //write length(rivers_pt); //about 40 000
 
         if (fill) {
         	write "filling";
@@ -53,10 +55,14 @@ global {
         }
 
         loop pt over: rivers_pt {
+        	write "pt y: " + pt.y;
             if (pt.y < c_h) {
                 source_cells << pt;
+                write "added source";
             }
         }
+        write "source: " + length(source_cells);
+        
         loop pt over: rivers_pt {
             if (pt.y > (shape.height - c_h)) {
                 drain_cells << pt;
