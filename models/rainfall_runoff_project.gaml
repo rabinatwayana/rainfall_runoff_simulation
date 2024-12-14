@@ -139,7 +139,7 @@ species rainfall_station {
 }
 
 experiment rainfall_runoff_view type: gui {
-    parameter "Input water at source" var: input_water <- 100.0 min: 0.0 max: 300.0 step: 0.1;
+    parameter "Input water at source" var: input_water <- 10.0 min: 0.0 max: 300.0 step: 0.1;
     parameter "Fill the river" var: fill <- true;
 
     output {
