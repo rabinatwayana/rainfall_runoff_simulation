@@ -128,7 +128,7 @@ global {
 	//Reflex to add water among the water cells
 	reflex adding_input_water {
 	//   	  float water_input <- rnd(100)/1000;
-		write hour_count;
+		write "hour:" + hour_count;
 		write "rainfall data " + rainfall_data[2, hour_count];
 		float water_input <- float(rainfall_data[2, hour_count]) * 3;
 		ask river_cells {
@@ -182,7 +182,7 @@ global {
 				float cell_water_height <- river_cell.water_height;
 
 				// Print the water height to the console
-				write "Water height at station location:" + cell_water_height;
+				write "measures water height: " + cell_water_height;
 			} else {
 				write "No grid cell found at station location.";
 			}
@@ -190,8 +190,8 @@ global {
 		}
 		
 		reflex read_river_height {
-			write hour_count;
-			write "water level data " + water_level_data[3, hour_count];
+//			write hour_count;
+			write "original water level data: " + water_level_data[3, hour_count];
 		}
 
 	}
@@ -400,31 +400,5 @@ experiment Run type: gui {
 		//         }
 		//      }
 	}
-
-
-   parameter "Shapefile for the river" var:river_shapefile category:"Water data";
-   parameter "Shapefile for the dykes" var:dykes_shapefile category:"Obstacles";
-   parameter "Shapefile for the buildings" var:buildings_shapefile category:"Obstacles";
-   parameter "Height of the dykes" var:dyke_height category:"Obstacles";
-   parameter "Diffusion rate" var:diffusion_rate category:"Water dynamic";
-   output { 
-   //layout vertical([0::5000,1::5000]) tabs:false editors: false;
-      display map type: 3d {
-
-         camera 'default' location: {7071.9529,10484.5136,5477.0823} target: {3450.0,3220.0,0.0};
-//		 mesh terrain scale: 5 triangulation: true  color: palette([#burlywood, #saddlebrown, #darkgreen, #green]) refresh: false smooth: true;
-         grid cell transparency:0.5 elevation:true;
-         species buildings aspect: geometry refresh: false;
-         species dyke aspect: geometry ;
-      }
-//      display chart_display refresh: every(24#cycles)  type: 2d  { 
-//         chart "Pressure on Dykes" type: series legend_font: font("Helvetica", 18)  label_font: font("Helvetica", 20, #bold)  title_font: font("Helvetica", 24, #bold){
-//            data "Mean pressure on dykes " value: mean(dyke collect (each.water_pressure)) style: line color: #magenta  ;
-//            data "Rate of dykes with max pressure" value: (dyke count (each.water_pressure = 1.0))/ length(dyke) style: line color: #red ;
-//            data "Rate of dykes with high pressure" value: (dyke count (each.water_pressure > 0.5))/ length(dyke) style: line color: #orange ;
-//            data "Rate of dykes with low pressure" value: (dyke count (each.water_pressure < 0.25))/ length(dyke) style: line color: #green ;
-//         }
-//      }
-   }
 
 }
