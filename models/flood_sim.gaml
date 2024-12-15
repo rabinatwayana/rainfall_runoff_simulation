@@ -230,9 +230,6 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 
 experiment Run type: gui {
    parameter "Shapefile for the river" var:river_shapefile category:"Water data";
-   parameter "Shapefile for the dykes" var:dykes_shapefile category:"Obstacles";
-   parameter "Shapefile for the buildings" var:buildings_shapefile category:"Obstacles";
-   parameter "Height of the dykes" var:dyke_height category:"Obstacles";
    parameter "Diffusion rate" var:diffusion_rate category:"Water dynamic";
    output { 
    //layout vertical([0::5000,1::5000]) tabs:false editors: false;
