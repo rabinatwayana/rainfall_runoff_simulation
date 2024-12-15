@@ -49,6 +49,17 @@ global {
 		create water_level_station number: 1 {
 			location <- point(to_GAMA_CRS({936005.822451834799722, 3077909.181984767317772, 1352.94620443}, "EPSG:32644"));
 		}
+
+		//dhap dam water flow start point: actual elevation=2066.741245738319776
+		create dhap_dam_point number: 1 {
+			location <- point(to_GAMA_CRS({939112.16664863564074, 3083560.629052739124745, 2098 + 5}, "EPSG:32644"));
+		}
+
+		//Bagdwar water flow start point actual height: 2514.674001746269823
+		create bagdwar_point number: 1 {
+			location <- point(to_GAMA_CRS({932670.207777618896216, 3084048.894010512623936, 2666 + 5}, "EPSG:32644"));
+		}
+
 		//Initialization of the cells
 		do init_cells;
 		//Initialization of the water cells
@@ -74,7 +85,7 @@ global {
 	action init_water {
 		geometry river <- geometry(river_shapefile);
 		ask cell overlapping river {
-			write (matrix(cell).rows);
+		//			write (matrix(cell).rows);
 			water_height <- 0.0;
 			is_river <- true;
 			is_drain <- grid_y = matrix(cell).rows - 1; //conditon check, whether it is end point of river or not, matrix(cell).rows= total number of rows in grid cells
@@ -127,6 +138,32 @@ global {
 		aspect default {
 			draw circle(50) color: #red;
 		}
+
+	}
+
+	species dhap_dam_point {
+
+		aspect default {
+			draw circle(30) color: #red;
+		}
+
+		//		reflex measure_elevation {
+		//			cell c <- cell(self.location);
+		//			write "dhap: " + c.altitude;
+		//		}
+
+	}
+
+	species bagdwar_point {
+
+		aspect default {
+			draw circle(30) color: #red;
+		}
+
+		//		reflex measure_elevation {
+		//			cell c <- cell(self.location);
+		//			write "bagdwar: " + c.altitude;
+		//		}	
 
 	}
 
@@ -234,6 +271,8 @@ experiment Run type: gui {
 	output {
 	//layout vertical([0::5000,1::5000]) tabs:false editors: false;
 		display map type: 3d {
+			species bagdwar_point aspect: default;
+			species dhap_dam_point aspect: default;
 			species rainfall_station aspect: default;
 			species water_level_station aspect: default;
 			camera 'default' location: {7071.9529, 10484.5136, 5477.0823} target: {3450.0, 3220.0, 0.0};
