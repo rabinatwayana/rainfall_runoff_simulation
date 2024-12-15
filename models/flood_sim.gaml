@@ -238,8 +238,6 @@ experiment Run type: gui {
          camera 'default' location: {7071.9529,10484.5136,5477.0823} target: {3450.0,3220.0,0.0};
 //		 mesh terrain scale: 5 triangulation: true  color: palette([#burlywood, #saddlebrown, #darkgreen, #green]) refresh: false smooth: true;
          grid cell transparency:0.5 elevation:true;
-         species buildings aspect: geometry refresh: false;
-         species dyke aspect: geometry ;
       }
 //      display chart_display refresh: every(24#cycles)  type: 2d  { 
 //         chart "Pressure on Dykes" type: series legend_font: font("Helvetica", 18)  label_font: font("Helvetica", 20, #bold)  title_font: font("Helvetica", 24, #bold){
