@@ -27,8 +27,8 @@ global {
 	field terrain <- field(dem_file1);
 
 	//import water level and rainfall data
-	file rainfall_file <- csv_file("../includes/Hydromet_Data/modified_DhapDamRainfalFinal(in).csv", ",");
-	file water_level_file <- csv_file("../includes/Hydromet_Data/WaterLevelSundarijalFinal(in).csv", ",");
+	file rainfall_file <- csv_file("../includes/Hydromet_Data/rainfall_test_data.csv", ",");
+	file water_level_file <- csv_file("../includes/Hydromet_Data/water_level_test_data.csv", ",");
 
 	//Diffusion rate
 	float diffusion_rate <- 0.6;
@@ -128,8 +128,9 @@ global {
 	//Reflex to add water among the water cells
 	reflex adding_input_water {
 	//   	  float water_input <- rnd(100)/1000;
-		write "hour:" + hour_count;
-		write "rainfall data " + rainfall_data[2, hour_count];
+		write "hour:-------------------------" + hour_count;
+		write "rainfall date_time:  " + rainfall_data[3, hour_count];
+		write "rainfall data:  " + rainfall_data[2, hour_count];
 		float water_input <- float(rainfall_data[2, hour_count]) * 3;
 		ask river_cells {
 			water_height <- water_height + water_input;
@@ -182,7 +183,7 @@ global {
 				float cell_water_height <- river_cell.water_height;
 
 				// Print the water height to the console
-				write "measures water height: " + cell_water_height;
+				write "CA water height:  " + cell_water_height;
 			} else {
 				write "No grid cell found at station location.";
 			}
@@ -191,7 +192,8 @@ global {
 		
 		reflex read_river_height {
 //			write hour_count;
-			write "original water level data: " + water_level_data[3, hour_count];
+			write "water_level date_time:  " + water_level_data[3, hour_count];
+			write "Water level: " + water_level_data[2, hour_count];
 		}
 
 	}
@@ -387,7 +389,7 @@ experiment Run type: gui {
 			species water_level_station aspect: default;
 			camera 'default' location: {7071.9529, 10484.5136, 5477.0823} target: {3450.0, 3220.0, 0.0};
 			mesh terrain triangulation: true color: palette([#burlywood, #saddlebrown, #darkgreen, #green]) refresh: false smooth: true;
-			grid cell transparency: 0.5 elevation: true triangulation: true; //scale:0.5
+			grid cell transparency: 0.5 elevation: true triangulation: true smooth: true; //scale:0.5
 			species buildings aspect: geometry refresh: false;
 			species dyke aspect: geometry;
 		}
