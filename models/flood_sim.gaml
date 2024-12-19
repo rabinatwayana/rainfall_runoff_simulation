@@ -10,8 +10,12 @@
 model hydro
 
 global {
+	 //river network load
+     file common_river_net_shapefile <- file("../includes/river_network/common/common_net_buff.shp");
+     file bhagdwar_river_net_shp <- file("../includes/river_network/bagdwar/bagdwar_river_net_buff_5m.shp");
+     file dhap_dam_river_net_shp <- file("../includes/river_network/dhap_dam/dhap_dam_river_net_buff_5m.shp");
 
-//Shapefile for the watershed
+	//Shapefile for the watershed
 	file river_shapefile <- file("../includes/watershed_bdry/watershed_polygon.shp");
 
 	//Data elevation file
@@ -59,7 +63,9 @@ global {
 		}
 
 		create water_level_station number: 1 {
-			location <- point(to_GAMA_CRS({936005.822451834799722, 3077909.181984767317772, 1352.94620443}, "EPSG:32644"));
+			
+			location <- point(to_GAMA_CRS({935973.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644"));
+//			location <- point(to_GAMA_CRS({936005.822451834799722, 3077909.181984767317772, 1352.94620443}, "EPSG:32644"));
 		}
 
 		//dhap dam water flow start point: actual elevation=2066.741245738319776
@@ -76,6 +82,9 @@ global {
 		do init_cells;
 		//Initialization of the water cells
 		do init_water;
+		
+		// Initialization of the water in river cells
+        do init_river_water;
 		//Initialization of the river cells
 		river_cells <- cell where (each.is_river);
 		//Initialization of the drain cells
@@ -105,7 +114,42 @@ global {
 
 	}
 	
+	
+       //action to initialize the water cells according to the river shape file and the drain
+       action init_river_water {
+               geometry common_river_geom <- geometry(common_river_net_shapefile);
+               geometry bhagdwar_river_geom <- geometry(bhagdwar_river_net_shp);
+               geometry dhap_dam_river_geom <- geometry(dhap_dam_river_net_shp);
+       
+       
+               ask cell overlapping common_river_geom {
+				// write "overlpping cell";
+                       water_height <- 3.0;
+               }
+               
+               ask cell overlapping bhagdwar_river_geom {
+                       water_height <- 3.0;
+               }
+               
+               ask cell overlapping dhap_dam_river_geom {
+                       water_height <- 3.0;
+               }
+               
+               ask cell {
+                       do update_color;
+               }
+
+       }
+	
 	reflex add_water_in_start_point_points {
+		ask dhap_dam_cell {
+			water_height <- 3;
+			}
+		
+		ask bagdwar_cell {
+			water_height <- 3;
+		}
+			
 //		write "dhap dam cell_____________";
 //		
 //		loop times:10 {
@@ -143,10 +187,10 @@ global {
 			hourly_water_input <- float(rainfall_data[2, hour_count]);
 			
 			if(steps_count = 0){
-				water_input <- hourly_water_input;
+				water_input <- hourly_water_input*1;
 			}
 			else{
-				water_input <- hourly_water_input / (60/hour_division);
+				water_input <- (hourly_water_input / (60/hour_division))*1;
 			}
 			
 			
@@ -267,8 +311,8 @@ global {
 
 		reflex read_river_height {
 		//			write steps_count;
-//			write "water_level date_time:  " + water_level_data[3, steps_count];
-//			write "Water level: " + water_level_data[2, steps_count];
+			write "water_level date_time:  " + water_level_data[3, steps_count];
+			write "Water level: " + water_level_data[2, steps_count];
 		}
 
 	}
