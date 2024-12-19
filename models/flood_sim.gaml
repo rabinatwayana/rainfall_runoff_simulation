@@ -146,7 +146,7 @@ global {
 				water_input <- hourly_water_input;
 			}
 			else{
-				water_input <- hourly_water_input / steps_count;
+				water_input <- hourly_water_input / (60/hour_division);
 			}
 			
 			
