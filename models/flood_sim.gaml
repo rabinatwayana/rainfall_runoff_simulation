@@ -37,6 +37,13 @@ global {
 	//initialize rainfall and water level data
 	matrix rainfall_data;
 	matrix water_level_data;
+	cell dhap_dam_cell;
+	cell bagdwar_cell;
+	
+	point bagdwar_location <- point(to_GAMA_CRS({932670.207777618896216, 3084048.894010512623936}, "EPSG:32644"));
+	
+	point dhap_dam_location <- point(to_GAMA_CRS({939112.16664863564074, 3083560.629052739124745}, "EPSG:32644"));
+//	bool is_dhap_dam_initialized <- false;
 
 	//hours for each time step - increase by 1
 	int hour_count <- 0;
@@ -92,6 +99,27 @@ global {
 		}
 
 	}
+	
+	reflex add_water_in_start_point_points {
+		write "dhap dam cell_____________";
+		
+		loop times:10 {
+			write "xx";
+			ask dhap_dam_cell {
+			water_height <- 100.0;
+			do flow;
+		}
+		
+
+		ask bagdwar_cell {
+			water_height <- 100.0;
+			do flow;
+		}
+		}
+	
+		
+
+	}
 
 	//Reflex to add water among the water cells
 	reflex adding_input_water {
@@ -101,9 +129,11 @@ global {
 		write "rainfall data:  " + rainfall_data[2, hour_count];
 		float water_input <- float(rainfall_data[2, hour_count]) * 3;
 		ask river_cells {
-			water_height <- water_height + water_input;
+			water_height <- water_height + 0.0;
 		}
-
+		//		ask river_cells {
+		//			water_height <- water_height + water_input;
+		//		}
 		hour_count <- hour_count + 1;
 	}
 	//Reflex to flow the water according to the altitute and the obstacle
@@ -143,6 +173,16 @@ global {
 
 	species dhap_dam_point {
 
+		init {
+			dhap_dam_cell <- cell(dhap_dam_location);
+//			dhap_dam_cell <- cell(self.location);
+			write "dhap_dam_cell location " + dhap_dam_cell;
+			
+			ask dhap_dam_cell {
+				write "Dhap Dam Cell initialized at: " + self.location.x + ", " + self.location.y;
+			}
+		}
+
 		aspect default {
 			draw circle(30) color: #red;
 		}
@@ -156,14 +196,25 @@ global {
 
 	species bagdwar_point {
 
+		init {
+//			bagdwar_cell <- cell(self.location);
+			
+			bagdwar_cell <- cell(bagdwar_location);
+//			is_dhap_dam_initialized <-true;
+			write "Bagdwar Point X: " + self.location.x;
+			write "Bagdwar Point Y: " + self.location.y;
+//			write "Bagdwar Point z: " + self.location.altitude;
+		}
+
+
 		aspect default {
 			draw circle(30) color: #red;
 		}
 
-		//		reflex measure_elevation {
-		//			cell c <- cell(self.location);
-		//			write "bagdwar: " + c.altitude;
-		//		}	
+				reflex measure_elevation {
+					cell c <- cell(self.location);
+					write "bagdwar: " + c.altitude;
+				}	
 
 	}
 
