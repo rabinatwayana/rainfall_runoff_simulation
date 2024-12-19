@@ -127,7 +127,7 @@ global {
 		write "hour:-------------------------" + hour_count;
 		write "rainfall date_time:  " + rainfall_data[3, hour_count];
 		write "rainfall data:  " + rainfall_data[2, hour_count];
-		float water_input <- float(rainfall_data[2, hour_count]) * 3;
+		float water_input <- float(rainfall_data[2, hour_count]);
 		ask river_cells {
 			water_height <- water_height + 0.0;
 		}
@@ -340,4 +340,5 @@ experiment Run type: gui {
 		//      }
 	}
 
+=
 }
