@@ -1,0 +1,10 @@
+{
+"type": "FeatureCollection",
+"name": "stations_19_dec_32644",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32644" } },
+"features": [
+{ "type": "Feature", "properties": { "Name": "rainfall station 1", "description": null, "timestamp": null, "begin": null, "end": null, "altitudeMode": null, "tessellate": -1, "extrude": 0, "visibility": -1, "drawOrder": null, "icon": null }, "geometry": { "type": "Point", "coordinates": [ 936916.406492630252615, 3077385.556299174204469, 0.0 ] } },
+{ "type": "Feature", "properties": { "Name": "rainfall station2", "description": null, "timestamp": null, "begin": null, "end": null, "altitudeMode": null, "tessellate": -1, "extrude": 0, "visibility": -1, "drawOrder": null, "icon": null }, "geometry": { "type": "Point", "coordinates": [ 939154.992724716081284, 3083799.811231955885887, 0.0 ] } },
+{ "type": "Feature", "properties": { "Name": "Water level station", "description": null, "timestamp": null, "begin": null, "end": null, "altitudeMode": null, "tessellate": -1, "extrude": 0, "visibility": -1, "drawOrder": null, "icon": null }, "geometry": { "type": "Point", "coordinates": [ 935973.399171121185645, 3077920.820926873479038, 0.0 ] } }
+]
+}
