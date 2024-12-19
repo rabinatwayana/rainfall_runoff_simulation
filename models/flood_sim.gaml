@@ -47,7 +47,12 @@ global {
 
 	//hours for each time step - increase by 1
 	int hour_count <- 0;
-
+	int steps_count <- 0;
+	float hourly_water_input <-0;
+	//divide hourly data to number of intermediate steps
+	int hour_division <- 10; //hourly data will be divided by hour_division in each step
+	float water_input <-0;
+	
 	init {
 		create rainfall_station number: 1 {
 			location <- point(to_GAMA_CRS({939154.872462730738334, 3083799.649202660657465, 2089.31517175}, "EPSG:32644"));
@@ -101,21 +106,21 @@ global {
 	}
 	
 	reflex add_water_in_start_point_points {
-		write "dhap dam cell_____________";
-		
-		loop times:10 {
-			write "xx";
-			ask dhap_dam_cell {
-			water_height <- 100.0;
-			do flow;
-		}
-		
-
-		ask bagdwar_cell {
-			water_height <- 100.0;
-			do flow;
-		}
-		}
+//		write "dhap dam cell_____________";
+//		
+//		loop times:10 {
+//			write "xx";
+//			ask dhap_dam_cell {
+//			water_height <- 100.0;
+//			do flow;
+//		}
+//		
+//
+//		ask bagdwar_cell {
+//			water_height <- 100.0;
+//			do flow;
+//		}
+//		}
 	
 		
 
@@ -124,17 +129,38 @@ global {
 	//Reflex to add water among the water cells
 	reflex adding_input_water {
 	//   	  float water_input <- rnd(100)/1000;
-		write "hour:-------------------------" + hour_count;
+		
+		write "hour_division:-----------------"+ hour_division;
+		write "steps_count:-------------------------" + steps_count;
+		write "hour_count:-------------------------" + hour_count;
 		write "rainfall date_time:  " + rainfall_data[3, hour_count];
-		write "rainfall data:  " + rainfall_data[2, hour_count];
-		float water_input <- float(rainfall_data[2, hour_count]);
-		ask river_cells {
-			water_height <- water_height + 0.0;
+		write "rainfall data:  " + rainfall_data[2, hour_count];		
+		
+		
+		if(hour_division*steps_count = hour_count*60){
+			write "condition true";
+			hour_count <- hour_count +1;
+			hourly_water_input <- float(rainfall_data[2, hour_count]);
+			
+			if(steps_count = 0){
+				water_input <- hourly_water_input;
+			}
+			else{
+				water_input <- hourly_water_input / (60/hour_division);
+			}
+			
+			
+			write "hourly_water_input: "+hourly_water_input;
 		}
-		//		ask river_cells {
-		//			water_height <- water_height + water_input;
-		//		}
-		hour_count <- hour_count + 1;
+		
+		write "water_input: "+water_input;
+//		ask river_cells {
+//			water_height <- water_height + 0.0;
+//		}
+		ask river_cells {
+			water_height <- water_height + water_input;
+		}
+		steps_count <- steps_count + 1;
 	}
 	//Reflex to flow the water according to the altitute and the obstacle
 	reflex flowing {
@@ -176,7 +202,7 @@ global {
 		init {
 			dhap_dam_cell <- cell(dhap_dam_location);
 //			dhap_dam_cell <- cell(self.location);
-			write "dhap_dam_cell location " + dhap_dam_cell;
+//			write "dhap_dam_cell location " + dhap_dam_cell;
 			
 			ask dhap_dam_cell {
 				write "Dhap Dam Cell initialized at: " + self.location.x + ", " + self.location.y;
@@ -201,8 +227,8 @@ global {
 			
 			bagdwar_cell <- cell(bagdwar_location);
 //			is_dhap_dam_initialized <-true;
-			write "Bagdwar Point X: " + self.location.x;
-			write "Bagdwar Point Y: " + self.location.y;
+//			write "Bagdwar Point X: " + self.location.x;
+//			write "Bagdwar Point Y: " + self.location.y;
 //			write "Bagdwar Point z: " + self.location.altitude;
 		}
 
@@ -213,7 +239,7 @@ global {
 
 				reflex measure_elevation {
 					cell c <- cell(self.location);
-					write "bagdwar: " + c.altitude;
+//					write "bagdwar: " + c.altitude;
 				}	
 
 	}
@@ -240,9 +266,9 @@ global {
 		}
 
 		reflex read_river_height {
-		//			write hour_count;
-			write "water_level date_time:  " + water_level_data[3, hour_count];
-			write "Water level: " + water_level_data[2, hour_count];
+		//			write steps_count;
+//			write "water_level date_time:  " + water_level_data[3, steps_count];
+//			write "Water level: " + water_level_data[2, steps_count];
 		}
 
 	}
