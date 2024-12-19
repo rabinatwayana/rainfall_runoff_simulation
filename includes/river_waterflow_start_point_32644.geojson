@@ -1,0 +1,9 @@
+{
+"type": "FeatureCollection",
+"name": "river_waterflow_start_point_32644",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32644" } },
+"features": [
+{ "type": "Feature", "properties": { "Name": "dham dam water flow start point", "description": null, "timestamp": null, "begin": null, "end": null, "altitudeMode": null, "tessellate": -1, "extrude": 0, "visibility": -1, "drawOrder": null, "icon": null }, "geometry": { "type": "Point", "coordinates": [ 939112.16664863564074, 3083560.629052739124745, 2066.741245738319776 ] } },
+{ "type": "Feature", "properties": { "Name": "Bagdwar water flow start point", "description": null, "timestamp": null, "begin": null, "end": null, "altitudeMode": null, "tessellate": -1, "extrude": 0, "visibility": -1, "drawOrder": null, "icon": null }, "geometry": { "type": "Point", "coordinates": [ 932670.207777618896216, 3084048.894010512623936, 2514.674001746269823 ] } }
+]
+}

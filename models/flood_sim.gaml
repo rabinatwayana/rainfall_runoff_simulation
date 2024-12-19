@@ -37,6 +37,13 @@ global {
 	//initialize rainfall and water level data
 	matrix rainfall_data;
 	matrix water_level_data;
+	cell dhap_dam_cell;
+	cell bagdwar_cell;
+	
+	point bagdwar_location <- point(to_GAMA_CRS({932670.207777618896216, 3084048.894010512623936}, "EPSG:32644"));
+	
+	point dhap_dam_location <- point(to_GAMA_CRS({939112.16664863564074, 3083560.629052739124745}, "EPSG:32644"));
+//	bool is_dhap_dam_initialized <- false;
 
 	//hours for each time step - increase by 1
 	int hour_count <- 0;
@@ -49,6 +56,17 @@ global {
 		create water_level_station number: 1 {
 			location <- point(to_GAMA_CRS({936005.822451834799722, 3077909.181984767317772, 1352.94620443}, "EPSG:32644"));
 		}
+
+		//dhap dam water flow start point: actual elevation=2066.741245738319776
+		create dhap_dam_point number: 1 {
+			location <- point(to_GAMA_CRS({939112.16664863564074, 3083560.629052739124745, 2098 + 5}, "EPSG:32644"));
+		}
+
+		//Bagdwar water flow start point actual height: 2514.674001746269823
+		create bagdwar_point number: 1 {
+			location <- point(to_GAMA_CRS({932670.207777618896216, 3084048.894010512623936, 2666 + 5}, "EPSG:32644"));
+		}
+
 		//Initialization of the cells
 		do init_cells;
 		//Initialization of the water cells
@@ -74,11 +92,32 @@ global {
 	action init_water {
 		geometry river <- geometry(river_shapefile);
 		ask cell overlapping river {
-			write (matrix(cell).rows);
+		//			write (matrix(cell).rows);
 			water_height <- 0.0;
 			is_river <- true;
 			is_drain <- grid_y = matrix(cell).rows - 1; //conditon check, whether it is end point of river or not, matrix(cell).rows= total number of rows in grid cells
 		}
+
+	}
+	
+	reflex add_water_in_start_point_points {
+		write "dhap dam cell_____________";
+		
+		loop times:10 {
+			write "xx";
+			ask dhap_dam_cell {
+			water_height <- 100.0;
+			do flow;
+		}
+		
+
+		ask bagdwar_cell {
+			water_height <- 100.0;
+			do flow;
+		}
+		}
+	
+		
 
 	}
 
@@ -90,9 +129,11 @@ global {
 		write "rainfall data:  " + rainfall_data[2, hour_count];
 		float water_input <- float(rainfall_data[2, hour_count]);
 		ask river_cells {
-			water_height <- water_height + water_input;
+			water_height <- water_height + 0.0;
 		}
-
+		//		ask river_cells {
+		//			water_height <- water_height + water_input;
+		//		}
 		hour_count <- hour_count + 1;
 	}
 	//Reflex to flow the water according to the altitute and the obstacle
@@ -127,6 +168,53 @@ global {
 		aspect default {
 			draw circle(50) color: #red;
 		}
+
+	}
+
+	species dhap_dam_point {
+
+		init {
+			dhap_dam_cell <- cell(dhap_dam_location);
+//			dhap_dam_cell <- cell(self.location);
+			write "dhap_dam_cell location " + dhap_dam_cell;
+			
+			ask dhap_dam_cell {
+				write "Dhap Dam Cell initialized at: " + self.location.x + ", " + self.location.y;
+			}
+		}
+
+		aspect default {
+			draw circle(30) color: #red;
+		}
+
+		//		reflex measure_elevation {
+		//			cell c <- cell(self.location);
+		//			write "dhap: " + c.altitude;
+		//		}
+
+	}
+
+	species bagdwar_point {
+
+		init {
+//			bagdwar_cell <- cell(self.location);
+			
+			bagdwar_cell <- cell(bagdwar_location);
+//			is_dhap_dam_initialized <-true;
+			write "Bagdwar Point X: " + self.location.x;
+			write "Bagdwar Point Y: " + self.location.y;
+//			write "Bagdwar Point z: " + self.location.altitude;
+		}
+
+
+		aspect default {
+			draw circle(30) color: #red;
+		}
+
+				reflex measure_elevation {
+					cell c <- cell(self.location);
+					write "bagdwar: " + c.altitude;
+				}	
 
 	}
 
@@ -229,23 +317,28 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 }
 
 experiment Run type: gui {
-   parameter "Shapefile for the river" var:river_shapefile category:"Water data";
-   parameter "Diffusion rate" var:diffusion_rate category:"Water dynamic";
-   output { 
-   //layout vertical([0::5000,1::5000]) tabs:false editors: false;
-      display map type: 3d {
+	parameter "Shapefile for the river" var: river_shapefile category: "Water data";
+	parameter "Diffusion rate" var: diffusion_rate category: "Water dynamic";
+	output {
+	//layout vertical([0::5000,1::5000]) tabs:false editors: false;
+		display map type: 3d {
+			species bagdwar_point aspect: default;
+			species dhap_dam_point aspect: default;
+			species rainfall_station aspect: default;
+			species water_level_station aspect: default;
+			camera 'default' location: {7071.9529, 10484.5136, 5477.0823} target: {3450.0, 3220.0, 0.0};
+			mesh terrain triangulation: true color: palette([#burlywood, #saddlebrown, #darkgreen, #green]) refresh: false smooth: true;
+			grid cell transparency: 0.5 elevation: true triangulation: true smooth: true; //scale:0.5
+		}
+		//      display chart_display refresh: every(24#cycles)  type: 2d  { 
+		//         chart "Pressure on Dykes" type: series legend_font: font("Helvetica", 18)  label_font: font("Helvetica", 20, #bold)  title_font: font("Helvetica", 24, #bold){
+		//            data "Mean pressure on dykes " value: mean(dyke collect (each.water_pressure)) style: line color: #magenta  ;
+		//            data "Rate of dykes with max pressure" value: (dyke count (each.water_pressure = 1.0))/ length(dyke) style: line color: #red ;
+		//            data "Rate of dykes with high pressure" value: (dyke count (each.water_pressure > 0.5))/ length(dyke) style: line color: #orange ;
+		//            data "Rate of dykes with low pressure" value: (dyke count (each.water_pressure < 0.25))/ length(dyke) style: line color: #green ;
+		//         }
+		//      }
+	}
 
-         camera 'default' location: {7071.9529,10484.5136,5477.0823} target: {3450.0,3220.0,0.0};
-//		 mesh terrain scale: 5 triangulation: true  color: palette([#burlywood, #saddlebrown, #darkgreen, #green]) refresh: false smooth: true;
-         grid cell transparency:0.5 elevation:true;
-      }
-//      display chart_display refresh: every(24#cycles)  type: 2d  { 
-//         chart "Pressure on Dykes" type: series legend_font: font("Helvetica", 18)  label_font: font("Helvetica", 20, #bold)  title_font: font("Helvetica", 24, #bold){
-//            data "Mean pressure on dykes " value: mean(dyke collect (each.water_pressure)) style: line color: #magenta  ;
-//            data "Rate of dykes with max pressure" value: (dyke count (each.water_pressure = 1.0))/ length(dyke) style: line color: #red ;
-//            data "Rate of dykes with high pressure" value: (dyke count (each.water_pressure > 0.5))/ length(dyke) style: line color: #orange ;
-//            data "Rate of dykes with low pressure" value: (dyke count (each.water_pressure < 0.25))/ length(dyke) style: line color: #green ;
-//         }
-//      }
-   }
+=
 }
