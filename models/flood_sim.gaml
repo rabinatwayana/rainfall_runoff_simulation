@@ -63,8 +63,8 @@ global {
 		}
 
 		create water_level_station number: 1 {
-			
-			location <- point(to_GAMA_CRS({935973.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644"));
+			location <- point(to_GAMA_CRS({936020.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644"));
+//			location <- point(to_GAMA_CRS({935973.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644"));
 //			location <- point(to_GAMA_CRS({936005.822451834799722, 3077909.181984767317772, 1352.94620443}, "EPSG:32644"));
 		}
 
@@ -124,15 +124,15 @@ global {
        
                ask cell overlapping common_river_geom {
 				// write "overlpping cell";
-                       water_height <- 3.0;
+                       water_height <- (0.2);
                }
                
                ask cell overlapping bhagdwar_river_geom {
-                       water_height <- 3.0;
+                       water_height <- (0.2*0.67);
                }
                
                ask cell overlapping dhap_dam_river_geom {
-                       water_height <- 3.0;
+                       water_height <- (0.2*0.33);
                }
                
                ask cell {
@@ -143,11 +143,11 @@ global {
 	
 	reflex add_water_in_start_point_points {
 		ask dhap_dam_cell {
-			water_height <- 3;
+			water_height <- (0.2*0.33);
 			}
 		
 		ask bagdwar_cell {
-			water_height <- 3;
+			water_height <- (0.2*0.67);
 		}
 			
 //		write "dhap dam cell_____________";
@@ -184,7 +184,7 @@ global {
 		if(hour_division*steps_count = hour_count*60){
 			write "condition true";
 			hour_count <- hour_count +1;
-			hourly_water_input <- float(rainfall_data[2, hour_count]);
+			hourly_water_input <- float(rainfall_data[2, hour_count])/1000;
 			
 			if(steps_count = 0){
 				water_input <- hourly_water_input*1;
@@ -211,7 +211,7 @@ global {
 	//		ask cell {
 	//			write self.altitude;
 	//		}
-		ask (cell sort_by ((each.altitude + each.water_height + each.obstacle_height))) {
+		ask (cell sort_by ((each.altitude + each.water_height /* + each.obstacle_height*/))) {
 		//			write altitude;
 			already <- false;
 			do flow;
@@ -291,11 +291,12 @@ global {
 	species water_level_station {
 
 		aspect default {
-			draw circle(50) color: #brown;
+			draw circle(10) color: #brown;
 		}
 
 		reflex measure_river_height {
 			cell river_cell <- cell(self.location);
+			write "river_cell_water_level"+ river_cell.altitude;
 			// Check if the cell exists
 			if (river_cell != nil) {
 			// Retrieve the water height
@@ -335,7 +336,7 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 	bool is_river <- false;
 
 	//Height of the obstacles
-	float obstacle_height <- 0.0;
+//	float obstacle_height <- 0.0;
 	bool already <- false;
 
 	//Action to flow the water 
@@ -346,23 +347,37 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 	//if the height of the water is higher than 0 then, it can flow among the neighbour cells
 		if (water_height > 0) {
 		//We get all the cells already done
-			list<cell> neighbour_cells_al <- neighbour_cells where (each.already);
+//			list<cell> neighbour_cells_al <- neighbour_cells where (each.already);
+			list<cell> neighbour_cells_al <- neighbour_cells;
+//			write "water_height: "+water_height;
+//			write "altitude: "+altitude;
 			//If there are cells already done then we continue
 			if (!empty(neighbour_cells_al)) {
 			//We compute the height of the neighbours cells according to their altitude, water_height and obstacle_height
 				ask neighbour_cells_al {
-					height <- altitude + water_height + obstacle_height;
+					height <- altitude + water_height;// + obstacle_height;
+//					write "neighbor: "+water_height + "Altitude: "+altitude;
 				}
 				//The height of the cell is equals to its altitude and water height
 				height <- altitude + water_height;
+//				write "water height: "+water_height;
+//				write "height: "+height;
+//				loop neighbour_ over: neighbour_cells_al {
+//					write "neighbour cell altitude: "+neighbour_.height;
+//				}
+				
 				//The water of the cells will flow to the neighbour cells which have a height less than the height of the actual cell
-				list<cell> flow_cells <- (neighbour_cells_al where (height > each.height));
+				list<cell> flow_cells <- (neighbour_cells_al where (each.height < height));
+//				write "flow cells: "+flow_cells;
 				//If there are cells, we compute the water flowing
 				if (!empty(flow_cells)) {
 				// bias minimize in cace of multiple cell avaible with same values
 					loop flow_cell over: shuffle(flow_cells) sort_by (each.height) {
+//						write "flow cell altitude: "+flow_cell.height; 
 					//The max function ensures that the value of water_flowing is not negative.
+						//how much water can be flowed form that cell to neighboring cell.
 						float water_flowing <- max([0.0, min([(height - flow_cell.height), water_height * diffusion_rate])]);
+//						float water_flowing <- water_height;
 						water_height <- water_height - water_flowing;
 						flow_cell.water_height <- flow_cell.water_height + water_flowing;
 						height <- altitude + water_height; // height- water_flowing
@@ -379,7 +394,7 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 	//Update the color of the cell
 	action update_color {
 		int val_water <- 0;
-		val_water <- max([0, min([255, int(255 * (1 - (water_height / 12.0)))])]); //consider water_height range from 0 to 12
+		val_water <- max([0, min([255, int(255 * (1 - (water_height*100 / 12)))])]); //consider water_height range from 0 to 12. 
 		color <- rgb([val_water, val_water, 255]);
 		//		grid_value <- water_height + altitude;  //seem to be no effect
 	}
