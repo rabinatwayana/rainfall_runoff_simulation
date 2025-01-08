@@ -53,9 +53,11 @@ global {
 	int hour_count <- 0;
 	int steps_count <- 0;
 	float hourly_water_input <-0;
+	float hourly_water_level_input <-0;
 	//divide hourly data to number of intermediate steps
-	int hour_division <- 10; //hourly data will be divided by hour_division in each step
+	int hour_division <- 5; //hourly data will be divided by hour_division in each step
 	float water_input <-0;
+	float water_level_input <-0;
 	
 	float measured_water_level;
 	
@@ -328,11 +330,26 @@ global {
 
 		reflex read_river_height {
 		//			write steps_count;
-			write "Original water_level date_time:  " + water_level_data[3, steps_count];
-			write "Original Water level: " + water_level_data[2, steps_count];
+			if(hour_division*steps_count = hour_count*60){
+	//			write "condition true";
+//				hour_count_river <- hour_count_river +1;
+				hourly_water_level_input <- float(water_level_data[2, hour_count]);
+				
+//				if(steps_count = 0){
+					water_level_input <- hourly_water_level_input*1;
+//				}
+//				else{
+//					water_level_input <- (hourly_water_level_input / (60/hour_division))*1;
+//				}
+				
+	//			write "hourly_water_input: "+hourly_water_input;
+			}
 			
 			//for validation
-			add water_level_data[2, steps_count] to: original_wl_list;
+			add water_level_input to: original_wl_list;
+			write "Original water_level date_time:  " + water_level_data[3, steps_count];
+			write "Original Water level: " + water_level_data[2, steps_count];
+		
 		}
 
 	}
