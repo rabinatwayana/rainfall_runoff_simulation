@@ -135,15 +135,15 @@ global {
        
                ask cell overlapping common_river_geom {
 				// write "overlpping cell";
-                       water_height <- (0.2);
+                       water_height <- (0.2)*10; //exagerated by 10
                }
                
                ask cell overlapping bhagdwar_river_geom {
-                       water_height <- (0.2*0.67);
+                       water_height <- (0.2*0.67)*10;
                }
                
                ask cell overlapping dhap_dam_river_geom {
-                       water_height <- (0.2*0.33);
+                       water_height <- (0.2*0.33)*10;
                }
                
                ask cell {
@@ -154,11 +154,11 @@ global {
 	
 	reflex add_water_in_start_point_points {
 		ask dhap_dam_cell {
-			water_height <- (0.2*0.33);
+			water_height <- (0.2*0.33)*10;
 			}
 		
 		ask bagdwar_cell {
-			water_height <- (0.2*0.67);
+			water_height <- (0.2*0.67)*10;
 		}
 			
 //		write "dhap dam cell_____________";
@@ -195,7 +195,7 @@ global {
 		if(hour_division*steps_count = hour_count*60){
 //			write "condition true";
 			hour_count <- hour_count +1;
-			hourly_water_input <- float(rainfall_data[2, hour_count])/1000;
+			hourly_water_input <- (float(rainfall_data[2, hour_count])/1000)*10;
 			
 			if(steps_count = 0){
 				water_input <- hourly_water_input*1;
@@ -314,7 +314,7 @@ global {
 			if (river_cell != nil) {
 			// Retrieve the water height
 //				float cell_water_height <- river_cell.water_height;
-				measured_water_level<- river_cell.water_height;
+				measured_water_level<- river_cell.water_height/10;
 
 				// Print the water height to the console
 				write "Measured water height:  " + measured_water_level;
@@ -430,29 +430,24 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 	//Update the color of the cell
 	action update_color {
 		int val_water <- 0;
-//		if water_height >0 {
-//			write water_height;
-//			write int(255 * (1 - (water_height/ 1)));
-//			write min([255, int(255 * (1 - (water_height/ 1)))]);
-//			write "val_water"+ max([0, min([255, int(255 * (1 - (water_height/ 1)))])]);
-//			write ",,,,,,,,,,";
-//		
-//		}
-//		
-//		
-//		if (water_height*10> 12){
-//			write water_height*100;
-//			write int(255 * (1 - (water_height*100/ 12)));
-//			write "val_water"+ max([0, min([255, int(255 * (1 - (water_height*100/ 12)))])]);
-//			write "........";
-//		}
-		
-		//faint blue: RGB(0, 150, 255)
-		//medium blue: RGB(0, 100, 200)
-		//dark blue: RGB(0, 50, 100)
-		val_water <- max([0, min([255, int(255 * (1 - (water_height*100/12)))])]); //consider water_height range from 0 to 12. 
 
-		color <- rgb([val_water, val_water, 255]);
+//		val_water <- max([0, min([255, int(255 * (1 - (water_height*100/12)))])]); //consider water_height range from 0 to 12. 
+//
+//		color <- rgb([val_water, val_water, 255]);
+	val_water <- int((1 - (water_height / (0.05*10))) * 255);
+		
+		if water_height=0{
+			color <- rgb([255,255,255]);
+		}else if water_height>(0.05*10){  //if water height is greater than 50 mm
+			color <- rgb([0,0,255]);
+		}
+		else if (val_water>255 or val_water<0){
+				write "water_height"+water_height;
+				write "val_water"+ val_water;
+				color <- rgb([255,0,0]);
+		}else {
+			color <- rgb([val_water,val_water,255]);
+		}
 
 	}
 
