@@ -57,6 +57,8 @@ global {
 	int hour_division <- 10; //hourly data will be divided by hour_division in each step
 	float water_input <-0;
 	
+	float measured_water_level;
+	
 	init {
 		create rainfall_station number: 1 {
 			location <- point(to_GAMA_CRS({939154.872462730738334, 3083799.649202660657465, 2089.31517175}, "EPSG:32644"));
@@ -300,10 +302,11 @@ global {
 			// Check if the cell exists
 			if (river_cell != nil) {
 			// Retrieve the water height
-				float cell_water_height <- river_cell.water_height;
+//				float cell_water_height <- river_cell.water_height;
+				measured_water_level<- river_cell.water_height;
 
 				// Print the water height to the console
-				write "CA water height:  " + cell_water_height;
+				write "CA water height:  " + measured_water_level;
 			} else {
 				write "No grid cell found at station location.";
 			}
@@ -347,8 +350,8 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 	//if the height of the water is higher than 0 then, it can flow among the neighbour cells
 		if (water_height > 0) {
 		//We get all the cells already done
-//			list<cell> neighbour_cells_al <- neighbour_cells where (each.already);
-			list<cell> neighbour_cells_al <- neighbour_cells;
+			list<cell> neighbour_cells_al <- neighbour_cells where (each.already);
+//			list<cell> neighbour_cells_al <- neighbour_cells;
 //			write "water_height: "+water_height;
 //			write "altitude: "+altitude;
 			//If there are cells already done then we continue
@@ -394,14 +397,44 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 	//Update the color of the cell
 	action update_color {
 		int val_water <- 0;
-		val_water <- max([0, min([255, int(255 * (1 - (water_height*100 / 12)))])]); //consider water_height range from 0 to 12. 
+		if water_height >0 {
+			write water_height;
+			write int(255 * (1 - (water_height/ 1)));
+			write min([255, int(255 * (1 - (water_height/ 1)))]);
+			write "val_water"+ max([0, min([255, int(255 * (1 - (water_height/ 1)))])]);
+			write ",,,,,,,,,,";
+		
+		}
+		
+		
+		if (water_height*100> 12){
+			write water_height*100;
+			write int(255 * (1 - (water_height*100/ 12)));
+			write "val_water"+ max([0, min([255, int(255 * (1 - (water_height*100/ 12)))])]);
+			write "........";
+		}
+		
+		val_water <- max([0, min([255, int(255 * (1 - (water_height*100/ 12)))])]); //consider water_height range from 0 to 12. 
+
 		color <- rgb([val_water, val_water, 255]);
-		//		grid_value <- water_height + altitude;  //seem to be no effect
+
 	}
 
 }
 
 experiment Run type: gui {
+	
+	
+	
+	
+	reflex save_data {
+		string date_col <- water_level_data[3, steps_count];
+		float original_water_level<- water_level_data[2, steps_count];
+		
+		
+		save [cycle,date_col, original_water_level, measured_water_level] to: "../results/results.csv" format: "csv" rewrite: false header: true;
+	}
+	
 	parameter "Shapefile for the river" var: river_shapefile category: "Water data";
 	parameter "Diffusion rate" var: diffusion_rate category: "Water dynamic";
 	output {
