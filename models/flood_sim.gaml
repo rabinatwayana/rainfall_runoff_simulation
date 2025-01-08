@@ -59,6 +59,13 @@ global {
 	
 	float measured_water_level;
 	
+	//plot chart for validation
+	list<float> original_wl_list <- [];
+	list<float> measured_wl_list <- [];
+	list<float> original_rainfall_list <- [];
+	
+	
+	
 	init {
 		create rainfall_station number: 1 {
 			location <- point(to_GAMA_CRS({939154.872462730738334, 3083799.649202660657465, 2089.31517175}, "EPSG:32644"));
@@ -176,15 +183,15 @@ global {
 	reflex adding_input_water {
 	//   	  float water_input <- rnd(100)/1000;
 		
-		write "hour_division:-----------------"+ hour_division;
-		write "steps_count:-------------------------" + steps_count;
-		write "hour_count:-------------------------" + hour_count;
-		write "rainfall date_time:  " + rainfall_data[3, hour_count];
-		write "rainfall data:  " + rainfall_data[2, hour_count];		
+//		write "hour_division:-----------------"+ hour_division;
+//		write "steps_count:-------------------------" + steps_count;
+//		write "hour_count:-------------------------" + hour_count;
+//		write "rainfall date_time:  " + rainfall_data[3, hour_count];
+//		write "rainfall data:  " + rainfall_data[2, hour_count];		
 		
 		
 		if(hour_division*steps_count = hour_count*60){
-			write "condition true";
+//			write "condition true";
 			hour_count <- hour_count +1;
 			hourly_water_input <- float(rainfall_data[2, hour_count])/1000;
 			
@@ -195,9 +202,11 @@ global {
 				water_input <- (hourly_water_input / (60/hour_division))*1;
 			}
 			
-			
-			write "hourly_water_input: "+hourly_water_input;
+//			write "hourly_water_input: "+hourly_water_input;
 		}
+		
+		//for validation
+		add water_input to: original_rainfall_list;
 		
 		write "water_input: "+water_input;
 //		ask river_cells {
@@ -251,7 +260,7 @@ global {
 //			write "dhap_dam_cell location " + dhap_dam_cell;
 			
 			ask dhap_dam_cell {
-				write "Dhap Dam Cell initialized at: " + self.location.x + ", " + self.location.y;
+//				write "Dhap Dam Cell initialized at: " + self.location.x + ", " + self.location.y;
 			}
 		}
 
@@ -298,7 +307,7 @@ global {
 
 		reflex measure_river_height {
 			cell river_cell <- cell(self.location);
-			write "river_cell_water_level"+ river_cell.altitude;
+//			write "river_cell_water_level"+ river_cell.water_height;
 			// Check if the cell exists
 			if (river_cell != nil) {
 			// Retrieve the water height
@@ -306,7 +315,11 @@ global {
 				measured_water_level<- river_cell.water_height;
 
 				// Print the water height to the console
-				write "CA water height:  " + measured_water_level;
+				write "Measured water height:  " + measured_water_level;
+				
+				//for validation
+				add measured_water_level to: measured_wl_list;
+				
 			} else {
 				write "No grid cell found at station location.";
 			}
@@ -315,8 +328,11 @@ global {
 
 		reflex read_river_height {
 		//			write steps_count;
-			write "water_level date_time:  " + water_level_data[3, steps_count];
-			write "Water level: " + water_level_data[2, steps_count];
+			write "Original water_level date_time:  " + water_level_data[3, steps_count];
+			write "Original Water level: " + water_level_data[2, steps_count];
+			
+			//for validation
+			add water_level_data[2, steps_count] to: original_wl_list;
 		}
 
 	}
@@ -397,24 +413,27 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 	//Update the color of the cell
 	action update_color {
 		int val_water <- 0;
-		if water_height >0 {
-			write water_height;
-			write int(255 * (1 - (water_height/ 1)));
-			write min([255, int(255 * (1 - (water_height/ 1)))]);
-			write "val_water"+ max([0, min([255, int(255 * (1 - (water_height/ 1)))])]);
-			write ",,,,,,,,,,";
+//		if water_height >0 {
+//			write water_height;
+//			write int(255 * (1 - (water_height/ 1)));
+//			write min([255, int(255 * (1 - (water_height/ 1)))]);
+//			write "val_water"+ max([0, min([255, int(255 * (1 - (water_height/ 1)))])]);
+//			write ",,,,,,,,,,";
+//		
+//		}
+//		
+//		
+//		if (water_height*10> 12){
+//			write water_height*100;
+//			write int(255 * (1 - (water_height*100/ 12)));
+//			write "val_water"+ max([0, min([255, int(255 * (1 - (water_height*100/ 12)))])]);
+//			write "........";
+//		}
 		
-		}
-		
-		
-		if (water_height*100> 12){
-			write water_height*100;
-			write int(255 * (1 - (water_height*100/ 12)));
-			write "val_water"+ max([0, min([255, int(255 * (1 - (water_height*100/ 12)))])]);
-			write "........";
-		}
-		
-		val_water <- max([0, min([255, int(255 * (1 - (water_height*100/ 12)))])]); //consider water_height range from 0 to 12. 
+		//faint blue: RGB(0, 150, 255)
+		//medium blue: RGB(0, 100, 200)
+		//dark blue: RGB(0, 50, 100)
+		val_water <- max([0, min([255, int(255 * (1 - (water_height*100/12)))])]); //consider water_height range from 0 to 12. 
 
 		color <- rgb([val_water, val_water, 255]);
 
@@ -456,5 +475,21 @@ experiment Run type: gui {
 		//            data "Rate of dykes with low pressure" value: (dyke count (each.water_pressure < 0.25))/ length(dyke) style: line color: #green ;
 		//         }
 		//      }
+		
+		 display "Actual Vs Predicted Water Level" type: 2d {
+				chart "Line Chart" type: series x_label: "timestep" memorize: false {
+					data "Original Water Level" value: original_wl_list color: #blue marker: false style: line;
+					data "Measured Water Level" value: measured_wl_list color: #red marker: false style: line;
+//					data "max biomass" value: maxlist color: #green marker: false style: line;
+				}
+			 }
+			 
+		display "Original Rainfall Data" type: 2d {
+				chart "Line Chart" type: series x_label: "timestep" memorize: false {
+					data "Original Rainfall Value in mm" value: original_rainfall_list color: #blue marker: false style: line;
+//					data "Measured Water Level" value: measured_wl_list color: #red marker: false style: line;
+//					data "max biomass" value: maxlist color: #green marker: false style: line;
+				}
+			 }
 	}
 }
