@@ -4,4 +4,6 @@ Reference/
 .DS_Store
 # .project
 # .settings
-results/*
+results
+results/
+results/results.csv
