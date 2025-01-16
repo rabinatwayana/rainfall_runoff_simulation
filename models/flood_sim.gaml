@@ -28,7 +28,7 @@ global {
 	file water_level_file <- csv_file("../includes/Hydromet_Data/water_level_test_data.csv", ",");
 
 	//Diffusion rate
-	float diffusion_rate <- 0.6;
+	float diffusion_rate <- 0.3;
 
 	//Shape of the environment using the dem file
 	geometry shape <- envelope(river_shapefile);
@@ -55,7 +55,11 @@ global {
 	float hourly_water_input <-0;
 	float hourly_water_level_input <-0;
 	//divide hourly data to number of intermediate steps
-	int hour_division <- 5; //hourly data will be divided by hour_division in each step
+	
+	int hour_steps <- 24; //no of steps that is run in an hour. change this to control water flow steps per hour
+	int hour_steps_new <- hour_steps;
+	bool hour_changed <- false;
+	int hour_division <- 60/hour_steps; //hourly data will be divided by hour_division in each step
 	float water_input <-0;
 	float water_level_input <-0;
 	
@@ -135,15 +139,15 @@ global {
        
                ask cell overlapping common_river_geom {
 				// write "overlpping cell";
-                       water_height <- (0.2)*10; //exagerated by 10
+                       water_height <- (0.3)*10; //exagerated by 10
                }
                
                ask cell overlapping bhagdwar_river_geom {
-                       water_height <- (0.2*0.67)*10;
+                       water_height <- (0.3*0.67)*10;
                }
                
                ask cell overlapping dhap_dam_river_geom {
-                       water_height <- (0.2*0.33)*10;
+                       water_height <- (0.3*0.33)*10;
                }
                
                ask cell {
@@ -154,11 +158,11 @@ global {
 	
 	reflex add_water_in_start_point_points {
 		ask dhap_dam_cell {
-			water_height <- (0.2*0.33)*10;
+			water_height <- (0.3*0.33)*10;
 			}
 		
 		ask bagdwar_cell {
-			water_height <- (0.2*0.67)*10;
+			water_height <- (0.3*0.67)*10;
 		}
 			
 //		write "dhap dam cell_____________";
@@ -191,20 +195,43 @@ global {
 //		write "rainfall date_time:  " + rainfall_data[3, hour_count];
 //		write "rainfall data:  " + rainfall_data[2, hour_count];		
 		
-		
-		if(hour_division*steps_count = hour_count*60){
+		write "step outside "+ steps_count;
+		write "hour_count outside "+ hour_count;
+	
+		if(hour_steps_new = steps_count+1){
 //			write "condition true";
-			hour_count <- hour_count +1;
-			hourly_water_input <- (float(rainfall_data[2, hour_count])/1000)*10;
+			write "step inside "+ steps_count;
+//			 
 			
-			if(steps_count = 0){
-				water_input <- hourly_water_input*1;
-			}
-			else{
-				water_input <- (hourly_water_input / (60/hour_division))*1;
-			}
+			hourly_water_input <- (float(rainfall_data[2, hour_count])/1000)*10; //*10 is exageration of water input
+			
+//			if(steps_count = 0){
+//				water_input <- hourly_water_input;
+//			}
+//			else{
+				
+				water_input <- hourly_water_input / (60/hour_division);
+//			}
+			
 			
 //			write "hourly_water_input: "+hourly_water_input;
+			write "hour steps new: "+hour_steps_new;
+			write "hour steps : "+hour_steps;
+			hour_steps_new <- hour_steps_new + hour_steps;
+			hour_count <- hour_count +1;
+			write "hour_count inside "+ hour_count;
+			write "hour_steps inside "+ hour_steps_new;
+			
+			hour_changed <-true;
+			
+			
+		}
+		else if(hour_count = 0){
+			hourly_water_input <- (float(rainfall_data[2, 0])/1000)*10; //*10 is exageration of water input
+			water_input <- hourly_water_input;
+			write "hourly rainfall inside "+water_input;
+			//for validation
+			add water_input to: original_rainfall_list;
 		}
 		
 		//for validation
@@ -330,7 +357,9 @@ global {
 
 		reflex read_river_height {
 		//			write steps_count;
-			if(hour_division*steps_count = hour_count*60){
+			write "outside"+hour_count;
+			if(hour_changed){
+				write "inside"+hour_count;
 	//			write "condition true";
 //				hour_count_river <- hour_count_river +1;
 				hourly_water_level_input <- float(water_level_data[2, hour_count]);
@@ -343,10 +372,17 @@ global {
 //				}
 				
 	//			write "hourly_water_input: "+hourly_water_input;
+				hour_changed <- false;
+	
+				
 			}
-			
+			else if(hour_count = 0){
+				water_level_input  <- float(water_level_data[2, hour_count]);
+			}
 			//for validation
 			add water_level_input to: original_wl_list;
+			
+			
 			write "Original water_level date_time:  " + water_level_data[3, steps_count];
 			write "Original Water level: " + water_level_data[2, steps_count];
 		
@@ -489,7 +525,7 @@ experiment Run type: gui {
 		//      }
 		
 		 display "Actual Vs Predicted Water Level" type: 2d {
-				chart "Line Chart" type: series x_label: "timestep" memorize: false {
+				chart "Water Level" type: series x_label: "timestep" memorize: false {
 					data "Original Water Level" value: original_wl_list color: #blue marker: false style: line;
 					data "Measured Water Level" value: measured_wl_list color: #red marker: false style: line;
 //					data "max biomass" value: maxlist color: #green marker: false style: line;
@@ -497,7 +533,7 @@ experiment Run type: gui {
 			 }
 			 
 		display "Original Rainfall Data" type: 2d {
-				chart "Line Chart" type: series x_label: "timestep" memorize: false {
+				chart "Rainfall" type: series x_label: "timestep" memorize: false {
 					data "Original Rainfall Value in mm" value: original_rainfall_list color: #blue marker: false style: line;
 //					data "Measured Water Level" value: measured_wl_list color: #red marker: false style: line;
 //					data "max biomass" value: maxlist color: #green marker: false style: line;
