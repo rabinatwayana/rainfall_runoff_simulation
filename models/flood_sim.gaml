@@ -24,8 +24,11 @@ global {
 	field terrain <- field(dem_file1);
 
 	//import water level and rainfall data
-	file rainfall_file <- csv_file("../includes/Hydromet_Data/rainfall_test_data.csv", ",");
-	file water_level_file <- csv_file("../includes/Hydromet_Data/water_level_test_data.csv", ",");
+//	file rainfall_file <- csv_file("../includes/Hydromet_Data/rainfall_test_data.csv", ",");
+//	file water_level_file <- csv_file("../includes/Hydromet_Data/water_level_test_data.csv", ",");
+	
+	file rainfall_file <- csv_file("../includes/Hydromet_Data/rainfall_sept_28.csv", ",");
+	file water_level_file <- csv_file("../includes/Hydromet_Data/water_level_sept_28.csv", ",");
 
 	//Diffusion rate
 	float diffusion_rate <- 0.3;
