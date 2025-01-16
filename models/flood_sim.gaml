@@ -56,7 +56,7 @@ global {
 	float hourly_water_level_input <-0;
 	//divide hourly data to number of intermediate steps
 	
-	int hour_steps <- 24; //no of steps that is run in an hour. change this to control water flow steps per hour
+	int hour_steps <- 10; //no of steps that is run in an hour. change this to control water flow steps per hour
 	int hour_steps_new <- hour_steps;
 	bool hour_changed <- false;
 	int hour_division <- 60/hour_steps; //hourly data will be divided by hour_division in each step
@@ -198,7 +198,7 @@ global {
 		write "step outside "+ steps_count;
 		write "hour_count outside "+ hour_count;
 	
-		if(hour_steps_new = steps_count+1){
+		if(hour_steps_new = steps_count){
 //			write "condition true";
 			write "step inside "+ steps_count;
 //			 
@@ -228,10 +228,8 @@ global {
 		}
 		else if(hour_count = 0){
 			hourly_water_input <- (float(rainfall_data[2, 0])/1000)*10; //*10 is exageration of water input
-			water_input <- hourly_water_input;
+			water_input <- hourly_water_input/(60/hour_division);
 			write "hourly rainfall inside "+water_input;
-			//for validation
-			add water_input to: original_rainfall_list;
 		}
 		
 		//for validation
