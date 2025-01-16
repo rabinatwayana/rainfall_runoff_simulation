@@ -56,7 +56,7 @@ global {
 	float hourly_water_level_input <-0;
 	//divide hourly data to number of intermediate steps
 	
-	int hour_steps <- 10; //no of steps that is run in an hour. change this to control water flow steps per hour
+	int hour_steps <- 20; //no of steps that is run in an hour. change this to control water flow steps per hour
 	int hour_steps_new <- hour_steps;
 	bool hour_changed <- false;
 	int hour_division <- 60/hour_steps; //hourly data will be divided by hour_division in each step
@@ -164,24 +164,6 @@ global {
 		ask bagdwar_cell {
 			water_height <- (0.3*0.67)*10;
 		}
-			
-//		write "dhap dam cell_____________";
-//		
-//		loop times:10 {
-//			write "xx";
-//			ask dhap_dam_cell {
-//			water_height <- 100.0;
-//			do flow;
-//		}
-//		
-//
-//		ask bagdwar_cell {
-//			water_height <- 100.0;
-//			do flow;
-//		}
-//		}
-	
-		
 
 	}
 
