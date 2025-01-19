@@ -450,7 +450,7 @@ experiment Run type: gui {
 	reflex save_data {
 		string date_col <- water_level_data[3, hour_count];
 		float original_water_level <- water_level_data[2, hour_count];
-		save [cycle, date_col, original_water_level, measured_water_level] to: "../results/results.csv" format: "csv" rewrite: false header: true;
+		save [cycle, steps_count, date_col, original_water_level, measured_water_level] to: "../results/results.csv" format: "csv" rewrite: cycle=0 header: true;
 	}
 
 	parameter "Shapefile for the river" var: river_shapefile category: "Water data";
