@@ -14,7 +14,7 @@ global {
 	file common_river_net_shapefile <- file("../includes/river_network/common/common_net_buff.shp");
 	file bhagdwar_river_net_shp <- file("../includes/river_network/bagdwar/bagdwar_river_net_buff_5m.shp");
 	file dhap_dam_river_net_shp <- file("../includes/river_network/dhap_dam/dhap_dam_river_net_buff_5m.shp");
-	float constant_river_water_input <- 3.0;
+	float constant_river_water_input <- 1;
 
 	//Shapefile for the watershed
 	file river_shapefile <- file("../includes/watershed_bdry/watershed_polygon.shp");
@@ -32,6 +32,7 @@ global {
 
 	//Diffusion rate
 	float diffusion_rate <- 0.3;
+	float water_scale_factor <- 1.0;
 
 	//Shape of the environment using the dem file
 	geometry shape <- envelope(river_shapefile);
@@ -56,7 +57,7 @@ global {
 	float hourly_water_input <- 0.0;
 	float hourly_water_level_input <- 0.0;
 	//divide hourly data to number of intermediate steps
-	int hour_steps <- 20; //no of steps that is run in an hour. change this to control water flow steps per hour
+	int hour_steps <- 20; //20; //no of steps that is run in an hour. change this to control water flow steps per hour
 	int hour_steps_new <- hour_steps;
 	bool hour_changed <- false;
 	//	int hour_division <- 60 / hour_steps; //hourly data will be divided by hour_division in each step
@@ -122,7 +123,9 @@ global {
 			//write (matrix(cell).rows);
 			water_height <- 0.0;
 			is_river <- true;
-			is_drain <- grid_y = matrix(cell).rows - 1; //conditon check, whether it is end point of river or not, matrix(cell).rows= total number of rows in grid cells
+			is_drain <- (grid_y = (matrix(cell).rows - 1)) or (grid_y = (matrix(cell).rows - 2)) or (grid_y = (matrix(cell).rows - 3));
+			
+//			is_drain <- grid_y = matrix(cell).rows - 2; //conditon check, whether it is end point of river or not, matrix(cell).rows= total number of rows in grid cells
 		}
 
 	}
@@ -134,15 +137,15 @@ global {
 		geometry dhap_dam_river_geom <- geometry(dhap_dam_river_net_shp);
 		ask cell overlapping common_river_geom {
 			// write "overlpping cell";
-			water_height <- constant_river_water_input * 10; //exagerated by 10
+			water_height <- constant_river_water_input * water_scale_factor; //exagerated by 10
 		}
 
 		ask cell overlapping bhagdwar_river_geom {
-			water_height <- (constant_river_water_input * 0.67) * 10;
+			water_height <- (constant_river_water_input * 0.67) * water_scale_factor;
 		}
 
 		ask cell overlapping dhap_dam_river_geom {
-			water_height <- (constant_river_water_input * 0.33) * 10;
+			water_height <- (constant_river_water_input * 0.33) * water_scale_factor;
 		}
 
 		ask cell {
@@ -153,11 +156,11 @@ global {
 
 	reflex add_water_in_start_point_points {
 		ask dhap_dam_cell {
-			water_height <- (constant_river_water_input * 0.33) * 10;
+			water_height <- (constant_river_water_input * 0.33) * water_scale_factor;
 		}
 
 		ask bagdwar_cell {
-			water_height <- (constant_river_water_input * 0.67) * 10;
+			water_height <- (constant_river_water_input * 0.67) * water_scale_factor;
 		}
 
 	}
@@ -179,7 +182,7 @@ global {
 		//			write "condition true";
 		//			write "step inside "+ steps_count;
 		//			 
-			hourly_water_input <- (float(rainfall_data[2, hour_count]) / 1000) * 10; //*10 is exageration of water input
+			hourly_water_input <- (float(rainfall_data[2, hour_count]) / 1000) * water_scale_factor; //*10 is exageration of water input
 
 			//			if(steps_count = 0){
 			//				water_input <- hourly_water_input;
@@ -198,7 +201,7 @@ global {
 			//			write "hour_steps inside "+ hour_steps_new;
 			hour_changed <- true;
 		} else if (hour_count = 0) {
-			hourly_water_input <- (float(rainfall_data[2, 0]) / 1000) * 10; //*10 is exageration of water input
+			hourly_water_input <- (float(rainfall_data[2, 0]) / 1000) * water_scale_factor; //*10 is exageration of water input
 			water_input <- hourly_water_input / hour_steps; //water_input <- hourly_water_input / (60 / hour_division);
 			//			write "hourly input: "+water_input;
 		}
@@ -308,7 +311,7 @@ global {
 			if (river_cell != nil) {
 			// Retrieve the water height
 			//				float cell_water_height <- river_cell.water_height;
-				measured_water_level <- river_cell.water_height / 10;
+				measured_water_level <- river_cell.water_height / water_scale_factor;
 
 				// Print the water height to the console
 				write "Measured water height:  " + measured_water_level;
@@ -432,6 +435,7 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 		//		val_water <- max([0, min([255, int(255 * (1 - (water_height*100/12)))])]); //consider water_height range from 0 to 12. 
 		//
 		//		color <- rgb([val_water, val_water, 255]);
+		
 		val_water <- int((1 - (water_height / (0.05 * 10))) * 255);
 		if water_height = 0 {
 			color <- rgb([255, 255, 255]);
@@ -450,7 +454,7 @@ experiment Run type: gui {
 	reflex save_data {
 		string date_col <- water_level_data[3, hour_count];
 		float original_water_level <- water_level_data[2, hour_count];
-		save [cycle, date_col, original_water_level, measured_water_level] to: "../results/results.csv" format: "csv" rewrite: false header: true;
+		save [cycle, steps_count, date_col, original_water_level, measured_water_level] to: "../results/results.csv" format: "csv" rewrite: cycle=0 header: true;
 	}
 
 	parameter "Shapefile for the river" var: river_shapefile category: "Water data";
