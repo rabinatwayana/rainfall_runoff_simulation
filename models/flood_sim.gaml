@@ -75,9 +75,16 @@ global {
 		create rainfall_station number: 1 {
 			location <- point(to_GAMA_CRS({939154.872462730738334, 3083799.649202660657465, 2089.31517175}, "EPSG:32644"));
 		}
+		
+		create dummy_point number: 1 {
+			location <- point(to_GAMA_CRS({936060.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644"));
+			//			location <- point(to_GAMA_CRS({935973.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644"));
+			//			location <- point(to_GAMA_CRS({936005.822451834799722, 3077909.181984767317772, 1352.94620443}, "EPSG:32644"));
+		}
 
 		create water_level_station number: 1 {
-			location <- point(to_GAMA_CRS({936020.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644"));
+//			location <- point(to_GAMA_CRS({936060.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644"));
+			 location <- point(to_GAMA_CRS({936020.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644")); //2nd_last
 			//			location <- point(to_GAMA_CRS({935973.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644"));
 			//			location <- point(to_GAMA_CRS({936005.822451834799722, 3077909.181984767317772, 1352.94620443}, "EPSG:32644"));
 		}
@@ -275,6 +282,13 @@ global {
 		//		}
 
 	}
+	
+	species dummy_point {
+
+		aspect default {
+			draw circle(10) color: #green;
+		}
+		}
 
 	species bagdwar_point {
 
@@ -297,6 +311,9 @@ global {
 		}
 
 	}
+	
+	
+		
 
 	species water_level_station {
 
@@ -378,11 +395,19 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 
 	//Action to flow the water 
 	action flow {
-
+		
+	
 	//height=altitude+water_height
+	//absorption parameter
+	if water_height>1 {
+//		write water_height;
+		water_height <- water_height - (0.005*water_height);
+	}
+	
 
 	//if the height of the water is higher than 0 then, it can flow among the neighbour cells
 		if (water_height > 0) {
+			
 		//We get all the cells already done
 			list<cell> neighbour_cells_al <- neighbour_cells where (each.already);
 			//			list<cell> neighbour_cells_al <- neighbour_cells;
@@ -462,6 +487,7 @@ experiment Run type: gui {
 	output {
 	//layout vertical([0::5000,1::5000]) tabs:false editors: false;
 		display map type: 3d {
+//			species dummy_point aspect: default;
 			species bagdwar_point aspect: default;
 			species dhap_dam_point aspect: default;
 			species rainfall_station aspect: default;
