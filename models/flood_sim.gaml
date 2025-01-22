@@ -21,6 +21,7 @@ global {
 	float infiltration_coeff <- 0.005;
 	float water_scale_factor <- 1.0;
 	int hour_steps <- 60;
+	bool rainfall_hour <- false;
 
 	//Shapefile for the watershed
 	file river_shapefile <- file("../includes/watershed_bdry/watershed_polygon.shp");
@@ -31,9 +32,7 @@ global {
 	field terrain <- field(dem_file1);
 
 	//import water level and rainfall data
-	//	file rainfall_file <- csv_file("../includes/Hydromet_Data/rainfall_test_data.csv", ",");
-	//	file water_level_file <- csv_file("../includes/Hydromet_Data/water_level_test_data.csv", ",");
-	file rainfall_file <- csv_file("../includes/Hydromet_Data/rainfall_sept_28.csv", ",");
+	file rainfall_file <- csv_file("../includes/Hydromet_Data/rainfall_extreme_event.csv", ",");
 	file water_level_file <- csv_file("../includes/Hydromet_Data/water_level_sept_28.csv", ",");
 
 	//Shape of the environment using the dem file
@@ -192,7 +191,7 @@ global {
 		if (hour_steps_new = steps_count) {
 		 
 			hourly_water_input <- (float(rainfall_data[2, hour_count]) / 1000) * (1 + water_scale_factor); //*10 is exageration of water input
-
+			
 			water_input <- hourly_water_input / hour_steps; //water_input <- hourly_water_input / (60 / hour_division);
 			hour_steps_new <- hour_steps_new + hour_steps;
 			hour_count <- hour_count + 1;
@@ -201,6 +200,12 @@ global {
 			hourly_water_input <- (float(rainfall_data[2, 0]) / 1000) * (1 + water_scale_factor); //*10 is exageration of water input
 			water_input <- hourly_water_input / hour_steps; //water_input <- hourly_water_input / (60 / hour_division);
 		}
+		
+		if (hourly_water_input > 0) {
+				rainfall_hour<- true;
+			} else {
+				rainfall_hour <- false;
+			}
 
 		//for validation
 		add water_input to: original_rainfall_list;
@@ -292,7 +297,7 @@ global {
 	species water_level_station {
 
 		aspect default {
-			draw circle(10) color: #brown;
+			draw circle(20) color: #brown;
 		}
 
 		reflex measure_river_height {
@@ -378,9 +383,14 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 	//height=altitude+water_height
 	//absorption parameter
 	//	if water_height>(constant_river_water_input*water_scale_factor) {
+//	if rainfall_hour=true{
+//		write "raingall_hour__________";
 		if water_height > 1 {
+			write water_height;
 			water_height <- water_height - (infiltration_coeff * water_height);
-		}
+		}	
+//	}
+		
 
 		//if the height of the water is higher than 0 then, it can flow among the neighbour cells
 		if (water_height > 0) {
@@ -495,14 +505,13 @@ experiment Run type: gui {
 			chart "Water Level" type: series x_label: "timestep" memorize: false {
 				data "Original Water Level" value: original_wl_list color: #blue marker: false style: line;
 				data "Measured Water Level" value: measured_wl_list color: #red marker: false style: line;
-				//					data "max biomass" value: maxlist color: #green marker: false style: line;
 			}
 
 		}
 
 		display "Original Rainfall Data" type: 2d {
 			chart "Rainfall" type: series x_label: "timestep" memorize: false {
-				data "Original Rainfall Value in mm" value: original_rainfall_list color: #blue marker: false style: line;
+				data "Rainfall Value in mm" value: original_rainfall_list color: #blue marker: false style: line;
 				//					data "Measured Water Level" value: measured_wl_list color: #red marker: false style: line;
 				//					data "max biomass" value: maxlist color: #green marker: false style: line;
 			}
