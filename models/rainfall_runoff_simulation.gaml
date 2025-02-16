@@ -18,7 +18,7 @@ global {
 	file common_river_net_shapefile <- file("../includes/river_network/common/common_net_buff.shp");
 
 	// read DEM fil2
-	file dem_file <- file("../includes/sundarijal_DEM_by_extent.asc");
+	file dem_file <- file("../includes/DEM/sundarijal_DEM_by_extent.asc");
 
 	//read water level and rainfall data
 	file rainfall_file <- csv_file("../includes/Hydromet_Data/rainfall_extreme_event.csv", ",");
@@ -28,7 +28,7 @@ global {
 	file watershep_shapefile <- file("../includes/watershed_bdry/watershed_polygon.shp");
 
 	//create field from dem_file to plot 3D terrain mesh
-	grid_file terrain_dem_file <- file("../includes/sundarijal_DEM_by_extent.asc");
+	grid_file terrain_dem_file <- file("../includes/DEM/sundarijal_DEM_by_extent.asc");
 	field terrain <- field(terrain_dem_file);
 
 	//Diffusion rate
