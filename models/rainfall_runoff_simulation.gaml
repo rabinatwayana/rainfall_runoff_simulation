@@ -1,45 +1,51 @@
 /**
-* Name: Hydrological Model
-* Author: Patrick Taillandier
-* Description: A model showing how to represent a flooding system with dykes and buildings. It uses 
-* 	a grid to discretize space, and has a 3D display. The water can flow from one cell to another considering 
-* 	the height of the cells, and the water pressure. It is also possible to delete dyke by clicking on one of them 
-* 	in the display.
-* Tags: shapefile, gis, grid, 3d, gui, hydrology
+* Name: Rainfall Runoff Simulation Model
+* Author: Upendra Oli and Rabina Twayana
+* Description: The primary objective was to create an agent-based model capable of simulating runoff dynamics for the Bagmati River 
+* and validate its accuracy by comparing simulated outcomes with observed data. 
+* After the model calibration, simulation was carried for three scenarios (high, medium and low rainfall event). 
+* This work seeks to advance our understanding of water flow dynamics and improve predictive capabilities in similar contexts. 
+* Tags: shapefile, gis, 3d, gui, hydrology
 */
-model hydro
+model rainfall_runoff
 
 global {
-//river network load
+	bool calibration_state <- false;
+
+	// read river network shapefiles
+	file bhagdwar_river_net_shp <- file("../includes/river_network/bagdwar/bagdwar_river_net_buff_5m.shp"); //bagmati river
+	file dhap_dam_river_net_shp <- file("../includes/river_network/dhap_dam/dhap_dam_river_net_buff_5m.shp"); //nagmati river
 	file common_river_net_shapefile <- file("../includes/river_network/common/common_net_buff.shp");
-	file bhagdwar_river_net_shp <- file("../includes/river_network/bagdwar/bagdwar_river_net_buff_5m.shp");
-	file dhap_dam_river_net_shp <- file("../includes/river_network/dhap_dam/dhap_dam_river_net_buff_5m.shp");
+
+	// read DEM fil2
+	file dem_file <- file("../includes/sundarijal_DEM_by_extent.asc");
+
+	//read water level and rainfall data
+	file rainfall_file <- csv_file("../includes/Hydromet_Data/rainfall_extreme_event.csv", ",");
+	file water_level_file <- csv_file("../includes/Hydromet_Data/water_level_sept_28.csv", ",");
+
+	//read watershed shapefile
+	file watershep_shapefile <- file("../includes/watershed_bdry/watershed_polygon.shp");
+
+	//create field from dem_file to plot 3D terrain mesh
+	grid_file terrain_dem_file <- file("../includes/sundarijal_DEM_by_extent.asc");
+	field terrain <- field(terrain_dem_file);
 
 	//Diffusion rate
-	float diffusion_rate <- 0.3;
+	float low_slope_diffusion_rate <- 0.3;
+	float medium_slope_diffusion_rate <- 0.6;
+	float high_slope_diffusion_rate <- 0.9;
+	
 	float constant_river_water_input <- 2.25;
 	float infiltration_coeff <- 0.005;
 	float water_scale_factor <- 1.0;
 	int hour_steps <- 60;
-	bool rainfall_hour <- false;
 
-	//Shapefile for the watershed
-	file river_shapefile <- file("../includes/watershed_bdry/watershed_polygon.shp");
-
-	//Data elevation file
-	file dem_file <- file("../includes/sundarijal_DEM_by_extent.asc");
-	grid_file dem_file1 <- file("../includes/sundarijal_DEM_by_extent.asc");
-	field terrain <- field(dem_file1);
-
-	//import water level and rainfall data
-	file rainfall_file <- csv_file("../includes/Hydromet_Data/rainfall_extreme_event.csv", ",");
-	file water_level_file <- csv_file("../includes/Hydromet_Data/water_level_sept_28.csv", ",");
-
-	//Shape of the environment using the dem file
-	geometry shape <- envelope(river_shapefile);
+	//Shape of the environment from the watershep_shapefile
+	geometry shape <- envelope(watershep_shapefile);
 
 	//List of the drain and river cells
-	list<cell> drain_cells; // end point of river
+	list<cell> drain_cells; 
 	list<cell> river_cells;
 	float step <- 1 #h;
 
@@ -48,47 +54,38 @@ global {
 	matrix water_level_data;
 	cell dhap_dam_cell;
 	cell bagdwar_cell;
+
+	//	water input start point of bagmati river
 	point bagdwar_location <- point(to_GAMA_CRS({932670.207777618896216, 3084048.894010512623936}, "EPSG:32644"));
+
+	//	water input start point of Nagmati river
 	point dhap_dam_location <- point(to_GAMA_CRS({939112.16664863564074, 3083560.629052739124745}, "EPSG:32644"));
-	//	bool is_dhap_dam_initialized <- false;
 
 	//hours for each time step - increase by 1
 	int hour_count <- 0;
 	int steps_count <- 0;
 	float hourly_water_input <- 0.0;
 	float hourly_water_level_input <- 0.0;
+	
 	//divide hourly data to number of intermediate steps
-	//	int hour_steps <- 60; //20; //no of steps that is run in an hour. change this to control water flow steps per hour
 	int hour_steps_new <- hour_steps;
 	bool hour_changed <- false;
-	//	int hour_division <- 60 / hour_steps; //hourly data will be divided by hour_division in each step
-	//	int hour_division <- 20;
 	float water_input <- 0.0;
 	float water_level_input <- 0.0;
 	float measured_water_level;
 
-	//plot chart for validation
+	//list of the values to plot chart for validation, wl means waterlevel
 	list<float> original_wl_list <- [];
 	list<float> measured_wl_list <- [];
 	list<float> original_rainfall_list <- [];
 
-	//	list<float> slope_list <- [];
 	init {
 		create rainfall_station number: 1 {
 			location <- point(to_GAMA_CRS({939154.872462730738334, 3083799.649202660657465, 2089.31517175}, "EPSG:32644"));
 		}
 
-		create dummy_point number: 1 {
-			location <- point(to_GAMA_CRS({936060.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644"));
-			//			location <- point(to_GAMA_CRS({935973.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644"));
-			//			location <- point(to_GAMA_CRS({936005.822451834799722, 3077909.181984767317772, 1352.94620443}, "EPSG:32644"));
-		}
-
 		create water_level_station number: 1 {
-		//			location <- point(to_GAMA_CRS({936060.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644"));
 			location <- point(to_GAMA_CRS({936020.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644")); //2nd_last
-			//			location <- point(to_GAMA_CRS({935973.399171121185645, 3077920.820926873479038, 1352.94620443}, "EPSG:32644"));
-			//			location <- point(to_GAMA_CRS({936005.822451834799722, 3077909.181984767317772, 1352.94620443}, "EPSG:32644"));
 		}
 
 		//dhap dam water flow start point: actual elevation=2066.741245738319776
@@ -117,17 +114,7 @@ global {
 		rainfall_data <- matrix(rainfall_file);
 		water_level_data <- matrix(water_level_file);
 	}
-	//Action to initialize the altitude value of the cell according to the dem file
 
-
-	//	reflex print_slope {
-	//		write "slope_list minimum" + min(slope_list);
-	//		write "slope_list maximum" + max(slope_list);
-	////		write slope_list;
-	//		write "__________";
-	//		slope_list <- [];
-	//		
-	//	}
 	action init_cells {
 		ask cell {
 			altitude <- grid_value;
@@ -135,16 +122,14 @@ global {
 		}
 
 	}
+
 	//action to initialize the water cells according to the river shape file and the drain
 	action init_water {
-		geometry river <- geometry(river_shapefile);
+		geometry river <- geometry(watershep_shapefile);
 		ask cell overlapping river {
-		//write (matrix(cell).rows);
 			water_height <- 0.02;
 			is_river <- true;
 			is_drain <- (grid_y = (matrix(cell).rows - 1)) or (grid_y = (matrix(cell).rows - 2)) or (grid_y = (matrix(cell).rows - 3));
-
-			//			is_drain <- grid_y = matrix(cell).rows - 2; //conditon check, whether it is end point of river or not, matrix(cell).rows= total number of rows in grid cells
 		}
 
 	}
@@ -155,7 +140,6 @@ global {
 		geometry bhagdwar_river_geom <- geometry(bhagdwar_river_net_shp);
 		geometry dhap_dam_river_geom <- geometry(dhap_dam_river_net_shp);
 		ask cell overlapping common_river_geom {
-		// write "overlpping cell";
 			water_height <- constant_river_water_input * (1 + water_scale_factor); //exagerated by 10
 		}
 
@@ -187,35 +171,28 @@ global {
 	//Reflex to add water among the water cells
 	reflex adding_input_water {
 		write "------------";
-		
 		if (hour_steps_new = steps_count) {
-		 
 			hourly_water_input <- (float(rainfall_data[2, hour_count]) / 1000) * (1 + water_scale_factor); //*10 is exageration of water input
-			
-			water_input <- hourly_water_input / hour_steps; //water_input <- hourly_water_input / (60 / hour_division);
+			water_input <- hourly_water_input / hour_steps;
 			hour_steps_new <- hour_steps_new + hour_steps;
 			hour_count <- hour_count + 1;
 			hour_changed <- true;
+			
 		} else if (hour_count = 0) {
-			hourly_water_input <- (float(rainfall_data[2, 0]) / 1000) * (1 + water_scale_factor); //*10 is exageration of water input
-			water_input <- hourly_water_input / hour_steps; //water_input <- hourly_water_input / (60 / hour_division);
+			hourly_water_input <- (float(rainfall_data[2, 0]) / 1000) * (1 + water_scale_factor);
+			water_input <- hourly_water_input / hour_steps;
 		}
-		
-		if (hourly_water_input > 0) {
-				rainfall_hour<- true;
-			} else {
-				rainfall_hour <- false;
-			}
 
 		//for validation
 		add water_input to: original_rainfall_list;
-		write "water_input: " + water_input;
+		//		write "water_input: " + water_input;
 		ask river_cells {
 			water_height <- water_height + water_input;
 		}
 
 		steps_count <- steps_count + 1;
 	}
+
 	//Reflex to flow the water according to the altitute and the obstacle
 	reflex flowing {
 		ask (cell sort_by ((each.altitude + each.water_height /* + each.obstacle_height*/))) {
@@ -224,6 +201,7 @@ global {
 		}
 
 	}
+
 	//Reflex to update the color of the cell
 	reflex update_cell_color {
 		ask cell {
@@ -231,6 +209,7 @@ global {
 		}
 
 	}
+
 	//Reflex for the drain cells to drain water
 	reflex draining {
 		ask drain_cells {
@@ -257,20 +236,7 @@ global {
 		}
 
 		aspect default {
-			draw circle(30) color: #red;
-		}
-
-		//		reflex measure_elevation {
-		//			cell c <- cell(self.location);
-		//			write "dhap: " + c.altitude;
-		//		}
-
-	}
-
-	species dummy_point {
-
-		aspect default {
-			draw circle(10) color: #green;
+			draw circle(30) color: #yellow;
 		}
 
 	}
@@ -279,13 +245,10 @@ global {
 
 		init {
 			bagdwar_cell <- cell(bagdwar_location);
-			//			write "Bagdwar Point X: " + self.location.x;
-			//			write "Bagdwar Point Y: " + self.location.y;
-			//			write "Bagdwar Point z: " + self.location.altitude;
 		}
 
 		aspect default {
-			draw circle(30) color: #red;
+			draw circle(30) color: #yellow;
 		}
 
 		reflex measure_elevation {
@@ -297,28 +260,17 @@ global {
 	species water_level_station {
 
 		aspect default {
-			draw circle(20) color: #brown;
+			draw circle(30) color: #brown;
 		}
 
 		reflex measure_river_height {
 			cell river_cell <- cell(self.location);
 
-			//			list<cell> neighbour_cells;
-			//			
-			//			list<cell> neighbour_cells_al <- neighbour_cells where (each.already);
-			//			list<cell> flow_cells <- (neighbour_cells_al where (each.height < height));
-
-
-			//			write "river_cell_water_level"+ river_cell.water_height;
 			// Check if the cell exists
 			if (river_cell != nil) {
-			// Retrieve the water height
-			//				float cell_water_height <- river_cell.water_height;
-
-			//				measured_water_level <- river_cell.water_height / water_scale_factor;
 				measured_water_level <- river_cell.water_height;
 
-				// Print the water height to the console
+				// Display the water height to the console
 				write "Measured water height:  " + measured_water_level;
 
 				//for validation
@@ -331,17 +283,8 @@ global {
 
 		reflex read_river_height {
 			if (hour_changed) {
-			//				hour_count_river <- hour_count_river +1;
 				hourly_water_level_input <- float(water_level_data[2, hour_count]);
-
-				//				if(steps_count = 0){
 				water_level_input <- hourly_water_level_input * 1;
-				//				}
-				//				else{
-				//					water_level_input <- (hourly_water_level_input / (60/hour_division))*1;
-				//				}
-
-				//			write "hourly_water_input: "+hourly_water_input;
 				hour_changed <- false;
 			} else if (hour_count = 0) {
 				water_level_input <- float(water_level_data[2, hour_count]);
@@ -350,8 +293,11 @@ global {
 			add water_level_input to: original_wl_list;
 			write "hour: " + hour_count;
 			write "steps: " + steps_count;
-			write "Original water_level date_time:  " + water_level_data[3, hour_count];
-			write "Original Water level: " + water_level_data[2, hour_count];
+			if calibration_state {
+				write "Original water_level date_time:  " + water_level_data[3, hour_count];
+				write "Original Water level: " + water_level_data[2, hour_count];
+			}
+
 		}
 
 	}
@@ -372,72 +318,48 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 	bool is_drain <- false;
 	//Boolean to know if it is a river cell
 	bool is_river <- false;
-
-	//Height of the obstacles
-	//	float obstacle_height <- 0.0;
 	bool already <- false;
 
 	//Action to flow the water 
 	action flow {
-
-	//height=altitude+water_height
-	//absorption parameter
-	//	if water_height>(constant_river_water_input*water_scale_factor) {
-//	if rainfall_hour=true{
-//		write "raingall_hour__________";
 		if water_height > 1 {
-			write water_height;
 			water_height <- water_height - (infiltration_coeff * water_height);
-		}	
-//	}
-		
+		}
 
 		//if the height of the water is higher than 0 then, it can flow among the neighbour cells
 		if (water_height > 0) {
 
 		//We get all the cells already done
 			list<cell> neighbour_cells_al <- neighbour_cells where (each.already);
-			//			list<cell> neighbour_cells_al <- neighbour_cells;
-			//			write "water_height: "+water_height;
-			//			write "altitude: "+altitude;
 			//If there are cells already done then we continue
 			if (!empty(neighbour_cells_al)) {
 			//We compute the height of the neighbours cells according to their altitude, water_height and obstacle_height
 				ask neighbour_cells_al {
-				//					add (myself.altitude - self.altitude) to: slope_list;
 					height <- altitude + water_height; // + obstacle_height;
-					//					write "neighbor: "+water_height + "Altitude: "+altitude;
 				}
+
 				//The height of the cell is equals to its altitude and water height
 				height <- altitude + water_height;
-				//				write "water height: "+water_height;
-				//				write "height: "+height;
-				//				loop neighbour_ over: neighbour_cells_al {
 				//					write "neighbour cell altitude: "+neighbour_.height;
 				//				}
 
 				//The water of the cells will flow to the neighbour cells which have a height less than the height of the actual cell
 				list<cell> flow_cells <- (neighbour_cells_al where (each.height < height));
-				//				write "flow cells: "+flow_cells;
 				//If there are cells, we compute the water flowing
 				if (!empty(flow_cells)) {
 				// bias minimize in cace of multiple cell avaible with same values
 					loop flow_cell over: shuffle(flow_cells) sort_by (each.height) {
-					//						write "flow cell altitude: "+flow_cell.height; 
-					//The max function ensures that the value of water_flowing is not negative.
-					//how much water can be flowed form that cell to neighboring cell.
+					//	The max function ensures that the value of water_flowing is not negative.
+					//	how much water can be flowed form that cell to neighboring cell.
 					//						add (height - flow_cell.height) to: slope_list;
-						float updated_diffusion_rate <- 0.3;
+						float updated_diffusion_rate <- low_slope_diffusion_rate;
 						if (height - flow_cell.height) > 60 {
-							updated_diffusion_rate <- 0.9;
-							//						write "updated_diff 0.8";
+							updated_diffusion_rate <- high_slope_diffusion_rate;
 						} else if (height - flow_cell.height) > 30 {
-						//						write "updated_diff 0.5";
-							updated_diffusion_rate <- 0.6;
+							updated_diffusion_rate <- medium_slope_diffusion_rate;
 						}
-						//						
-						float water_flowing <- max([0.0, min([(height - flow_cell.height), water_height * diffusion_rate])]);
-						//						float water_flowing <- water_height;
+
+						float water_flowing <- max([0.0, min([(height - flow_cell.height), water_height * updated_diffusion_rate])]);
 						water_height <- water_height - water_flowing;
 						flow_cell.water_height <- flow_cell.water_height + water_flowing;
 						height <- altitude + water_height; // height- water_flowing
@@ -454,18 +376,12 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 	//Update the color of the cell
 	action update_color {
 		int val_water <- 0;
-
-		//		val_water <- max([0, min([255, int(255 * (1 - (water_height*100/12)))])]); //consider water_height range from 0 to 12. 
-		//
-		//		color <- rgb([val_water, val_water, 255]);
 		val_water <- int((1 - (water_height / (0.05 * 10))) * 255);
 		if water_height = 0 {
 			color <- rgb([255, 255, 255]);
 		} else if water_height > (0.05 * 10) { //if water height is greater than 50 mm
 			color <- rgb([0, 0, 255]);
 		} else if (val_water > 255 or val_water < 0) {
-			write "water_height" + water_height;
-			write "val_water" + val_water;
 			color <- rgb([255, 0, 0]);
 		} else {
 			color <- rgb([val_water, val_water, 255]);
@@ -479,12 +395,12 @@ experiment Run type: gui {
 		save [cycle, steps_count, date_col, original_water_level, measured_water_level] to: "../results/results.csv" format: "csv" rewrite: cycle = 0 header: true;
 	}
 
-	parameter "Shapefile for the river" var: river_shapefile category: "Water data";
-	parameter "Diffusion rate" var: diffusion_rate category: "Water dynamic";
+	parameter "csv input" var: rainfall_file category: "Rainfall";
+	parameter "Low slope diffusion rate" var: low_slope_diffusion_rate category: "Water dynamic";
+	parameter "Medium slope diffusion rate" var: medium_slope_diffusion_rate category: "Water dynamic";
+	parameter "High slope diffusion rate" var: high_slope_diffusion_rate category: "Water dynamic";
 	output {
-	//layout vertical([0::5000,1::5000]) tabs:false editors: false;
 		display map type: 3d {
-		//			species dummy_point aspect: default;
 			species bagdwar_point aspect: default;
 			species dhap_dam_point aspect: default;
 			species rainfall_station aspect: default;
@@ -493,17 +409,11 @@ experiment Run type: gui {
 			mesh terrain triangulation: true color: palette([#burlywood, #saddlebrown, #darkgreen, #green]) refresh: false smooth: true;
 			grid cell transparency: 0.5 elevation: true triangulation: true smooth: true; //scale:0.5
 		}
-		//      display chart_display refresh: every(24#cycles)  type: 2d  { 
-		//         chart "Pressure on Dykes" type: series legend_font: font("Helvetica", 18)  label_font: font("Helvetica", 20, #bold)  title_font: font("Helvetica", 24, #bold){
-		//            data "Mean pressure on dykes " value: mean(dyke collect (each.water_pressure)) style: line color: #magenta  ;
-		//            data "Rate of dykes with max pressure" value: (dyke count (each.water_pressure = 1.0))/ length(dyke) style: line color: #red ;
-		//            data "Rate of dykes with high pressure" value: (dyke count (each.water_pressure > 0.5))/ length(dyke) style: line color: #orange ;
-		//            data "Rate of dykes with low pressure" value: (dyke count (each.water_pressure < 0.25))/ length(dyke) style: line color: #green ;
-		//         }
-		//      }
-		display "Actual Vs Predicted Water Level" type: 2d {
+
+		display "Measured Water Level" type: 2d {
 			chart "Water Level" type: series x_label: "timestep" memorize: false {
-				data "Original Water Level" value: original_wl_list color: #blue marker: false style: line;
+			//	uncomment follwing line during calibration state
+			//	data "Original Water Level" value: original_wl_list color: #blue marker: false style: line;	
 				data "Measured Water Level" value: measured_wl_list color: #red marker: false style: line;
 			}
 
@@ -512,8 +422,6 @@ experiment Run type: gui {
 		display "Original Rainfall Data" type: 2d {
 			chart "Rainfall" type: series x_label: "timestep" memorize: false {
 				data "Rainfall Value in mm" value: original_rainfall_list color: #blue marker: false style: line;
-				//					data "Measured Water Level" value: measured_wl_list color: #red marker: false style: line;
-				//					data "max biomass" value: maxlist color: #green marker: false style: line;
 			}
 
 		}
