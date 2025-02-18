@@ -11,6 +11,7 @@
 * Tags: shapefile, gis, 3d, gui, hydrology
 * 
 * DATASET:
+* calibration datasets are: rainfall_sept_28.csv and water_level_sept_28.csv
 * Test data for three different scenarios(rainfall_low_event.csv,rainfall_medium_event.csvand rainfall_extreme_event.csv) is available in includes/Hydromet_Data folder.
 */
 
@@ -375,9 +376,9 @@ grid cell file: dem_file neighbors: 8 frequency: 0 use_regular_agents: false use
 					
 					//	how much water can be flowed form that cell to neighboring cell, diffusion based on slope
 						float updated_diffusion_rate <- low_slope_diffusion_rate;
-						if (height - flow_cell.height) > 60 {
+						if (altitude - flow_cell.altitude) > 10 {
 							updated_diffusion_rate <- high_slope_diffusion_rate;
-						} else if (height - flow_cell.height) > 30 {
+						} else if (altitude - flow_cell.altitude) > 5 {
 							updated_diffusion_rate <- medium_slope_diffusion_rate;
 						}
 						//	The max function ensures that the value of water_flowing is not negative.
@@ -436,7 +437,7 @@ experiment Run type: gui {
 		display "Measured Water Level" type: 2d {
 			chart "Water Level" type: series x_label: "timestep" memorize: false {
 			//	uncomment following line during calibration state only
-			//	data "Original Water Level" value: original_wl_list color: #blue marker: false style: line;	
+//				data "Original Water Level" value: original_wl_list color: #blue marker: false style: line;	
 				data "Measured Water Level" value: measured_wl_list color: #red marker: false style: line;
 			}
 
